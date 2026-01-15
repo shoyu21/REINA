@@ -1,0 +1,95 @@
+REINA Proprietary License
+
+Copyright (c) 2025 REINA Contributors
+
+All Rights Reserved
+
+TERMS AND CONDITIONS
+
+1. DEFINITIONS
+
+"Software" refers to the REINA (RRT Evidence-Based Integrated Nursing & Attending Support) 
+clinical decision support tool, including all source code, documentation, and associated files.
+
+"Use" refers to accessing, viewing, running, or interacting with the Software.
+
+"Derivative Work" refers to any modification, adaptation, translation, or transformation of 
+the Software.
+
+2. GRANT OF LICENSE
+
+Permission is hereby granted, free of charge, to any person obtaining access to this Software, 
+to use the Software for personal, educational, and clinical decision support purposes, subject 
+to the following conditions:
+
+3. RESTRICTIONS
+
+a) MODIFICATION: You may not modify, adapt, translate, or create derivative works based upon 
+   the Software without prior written permission from the copyright holder.
+
+b) REDISTRIBUTION: You may not redistribute, sell, lease, license, sublicense, or otherwise 
+   transfer the Software or any portion thereof without prior written permission from the 
+   copyright holder.
+
+c) COMMERCIAL USE: Commercial use of the Software requires prior written permission from the 
+   copyright holder.
+
+d) REVERSE ENGINEERING: You may not reverse engineer, decompile, or disassemble the Software, 
+   except to the extent that such activity is expressly permitted by applicable law.
+
+e) REMOVAL OF NOTICES: You may not remove, alter, or obscure any copyright, trademark, or 
+   other proprietary notices contained in the Software.
+
+4. ATTRIBUTION
+
+When referencing REINA in any context, appropriate attribution must be given to the original 
+creators. See CITATION.cff for proper citation format.
+
+5. CLINICAL USE DISCLAIMER
+
+THE SOFTWARE IS PROVIDED FOR EDUCATIONAL AND CLINICAL DECISION SUPPORT PURPOSES ONLY. IT IS 
+NOT INTENDED TO REPLACE PROFESSIONAL MEDICAL JUDGMENT, INSTITUTIONAL PROTOCOLS, OR DIRECT 
+PATIENT ASSESSMENT. THE SOFTWARE SHOULD NOT BE USED AS THE SOLE BASIS FOR ANY CLINICAL 
+DECISION.
+
+6. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING 
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND 
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
+DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING 
+FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+7. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE 
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND 
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+POSSIBILITY OF SUCH DAMAGE.
+
+8. INDEMNIFICATION
+
+You agree to indemnify and hold harmless the copyright holder from any claims, damages, losses, 
+or expenses arising from your use of the Software or violation of these terms.
+
+9. TERMINATION
+
+This license is effective until terminated. Your rights under this license will terminate 
+automatically without notice if you fail to comply with any term of this license.
+
+10. GOVERNING LAW
+
+This license shall be governed by and construed in accordance with the laws of Singapore, 
+without regard to its conflict of law provisions.
+
+11. CONTACT
+
+For permissions, licensing inquiries, or questions regarding this license, please contact 
+the copyright holder through the project repository.
+
+---
+
+By using REINA, you acknowledge that you have read, understood, and agree to be bound by 
+the terms and conditions of this license.

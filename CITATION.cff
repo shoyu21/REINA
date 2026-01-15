@@ -1,0 +1,84 @@
+cff-version: 1.2.0
+title: >-
+  REINA: RRT Evidence-Based Integrated Nursing & Attending Support
+message: >-
+  If you use or reference REINA in your work, please cite it using
+  the metadata from this file.
+type: software
+authors:
+  - name: REINA Contributors
+    affiliation: Medical Intensive Care Unit
+version: 9.4.0
+date-released: '2025-01-15'
+license: Proprietary
+repository-code: 'https://github.com/shoyu21/REINA'
+url: 'https://shoyu21.github.io/REINA'
+abstract: >-
+  REINA (RRT Evidence-Based Integrated Nursing & Attending Support) is
+  a goal-directed clinical decision support tool for Renal Replacement
+  Therapy in the ICU setting. It provides evidence-synthesized guidance
+  for RRT initiation, modality selection, anticoagulation, prescription
+  generation, monitoring, and discontinuation decisions. The tool
+  integrates evidence from major trials including STARRT-AKI, AKIKI,
+  IDEAL-ICU, RENAL, ATN, and IVOIRE, while supporting personalized
+  recommendations based on individual patient goals and clinical context.
+keywords:
+  - Renal Replacement Therapy
+  - RRT
+  - CRRT
+  - Continuous Renal Replacement Therapy
+  - Critical Care
+  - ICU
+  - Clinical Decision Support
+  - Acute Kidney Injury
+  - AKI
+  - Nephrology
+  - Intensive Care
+  - Evidence-Based Medicine
+  - Goal-Directed Therapy
+  - Hemofiltration
+  - Hemodialysis
+  - CVVH
+  - CVVHD
+  - CVVHDF
+references:
+  - type: article
+    title: >-
+      Timing of Initiation of Renal-Replacement Therapy in Acute Kidney Injury
+    authors:
+      - name: STARRT-AKI Investigators
+    journal: New England Journal of Medicine
+    year: 2020
+    scope: Evidence for RRT timing recommendations
+  - type: article
+    title: >-
+      Initiation Strategies for Renal-Replacement Therapy in the Intensive Care Unit
+    authors:
+      - name: AKIKI Investigators
+    journal: JAMA
+    year: 2016
+    scope: Evidence for delayed initiation strategy
+  - type: article
+    title: >-
+      Timing of Renal Support and Outcome of Septic Shock and Acute Respiratory Distress Syndrome
+    authors:
+      - name: IDEAL-ICU Investigators
+    journal: New England Journal of Medicine
+    year: 2018
+    scope: Evidence for RRT timing in septic shock
+  - type: article
+    title: >-
+      Intensity of Continuous Renal-Replacement Therapy in Critically Ill Patients
+    authors:
+      - name: RENAL Investigators
+    journal: New England Journal of Medicine
+    year: 2009
+    scope: Evidence for RRT dosing recommendations
+  - type: article
+    title: >-
+      Regional citrate versus systemic heparin anticoagulation for continuous renal replacement therapy
+    authors:
+      - name: Bai M, et al.
+    journal: Cochrane Database of Systematic Reviews
+    year: 2020
+    scope: Evidence for anticoagulation recommendations

@@ -1,0 +1,3491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REINA v9.4 - Goal-Directed RRT Decision Support</title>
+    <style>
+        :root {
+            --primary: #0e7490;
+            --primary-dark: #0c5c72;
+            --primary-light: #22d3ee;
+            --secondary: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --initiation: #8b5cf6;
+            --transition: #06b6d4;
+            --coffee-brown: #8B4513;
+            --coffee-cream: #D2B48C;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        header h1 { font-size: 26px; margin-bottom: 8px; }
+        header p { opacity: 0.9; font-size: 13px; }
+        
+        .version-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        
+        .live-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .cct-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+        
+        .new-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+        
+        .restored-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 500px 1fr;
+            gap: 24px;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+        
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .card-header h2 {
+            font-size: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .section-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .section-label:first-of-type { margin-top: 0; }
+        
+        .required-tag {
+            font-size: 9px;
+            background: #fecaca;
+            color: #991b1b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .optional-tag {
+            font-size: 9px;
+            background: #e2e8f0;
+            color: #64748b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .citrate-tag {
+            font-size: 9px;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .input-group { margin-bottom: 12px; }
+        
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .input-row label {
+            flex: 1;
+            font-size: 12px;
+            color: var(--text);
+        }
+        
+        .input-row input[type="number"],
+        .input-row select {
+            width: 100px;
+            padding: 7px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        
+        .input-row select.wide-select { width: 180px; }
+        
+        .input-row input:focus,
+        .input-row select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.1);
+        }
+        
+        .unit-suffix {
+            font-size: 11px;
+            color: var(--text-light);
+            min-width: 50px;
+        }
+        
+        /* Tooltips */
+        .info-icon {
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: help;
+            position: relative;
+        }
+        
+        .info-icon:hover .tooltip { display: block; }
+        
+        .tooltip {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: normal;
+            width: 280px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            line-height: 1.5;
+        }
+        
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            border-top-color: #1e293b;
+        }
+        
+        .tooltip-title { font-weight: 600; margin-bottom: 4px; color: var(--primary-light); }
+        .tooltip-ref { font-size: 10px; color: #94a3b8; font-style: italic; margin-top: 6px; border-top: 1px solid #334155; padding-top: 6px; }
+        
+        /* Auto calc display */
+        .auto-calc-display {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 1px solid #a7f3d0;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #065f46;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .auto-calc-display .calc-value { font-weight: 700; font-size: 13px; }
+        
+        /* Goal selection */
+        .goal-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        
+        @media (max-width: 600px) { .goal-grid { grid-template-columns: repeat(2, 1fr); } }
+        
+        .goal-btn {
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .goal-btn:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .goal-btn.active { border-color: var(--success); background: #f0fdf4; }
+        
+        .goal-icon { font-size: 24px; margin-bottom: 4px; }
+        .goal-title { font-size: 11px; font-weight: 600; color: var(--text); }
+        .goal-desc { font-size: 9px; color: var(--text-light); margin-top: 2px; }
+        
+        /* Condition buttons */
+        .condition-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .condition-btn {
+            padding: 5px 10px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: white;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .condition-btn:hover { border-color: var(--primary); }
+        .condition-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .condition-btn.warning { border-color: var(--warning); }
+        .condition-btn.warning.active { background: var(--warning); border-color: var(--warning); }
+        .condition-btn.danger { border-color: var(--danger); }
+        .condition-btn.danger.active { background: var(--danger); border-color: var(--danger); }
+        .condition-btn.initiation { border-color: var(--initiation); }
+        .condition-btn.initiation.active { background: var(--initiation); border-color: var(--initiation); }
+        
+        /* Shock selection */
+        .shock-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .shock-btn {
+            padding: 6px 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .shock-btn:hover { transform: translateY(-1px); }
+        .shock-btn.active { border-color: var(--primary); background: #f0f9ff; font-weight: 600; }
+        .shock-btn.distributive.active { border-color: #ef4444; background: #fef2f2; }
+        .shock-btn.cardiogenic.active { border-color: #8b5cf6; background: #faf5ff; }
+        .shock-btn.hypovolemic.active { border-color: #f59e0b; background: #fffbeb; }
+        .shock-btn.obstructive.active { border-color: #06b6d4; background: #ecfeff; }
+        .shock-btn.mixed.active { border-color: #64748b; background: #f8fafc; }
+        
+        /* ==========================================
+           NEW TIERED STEP 1 STYLES
+           ========================================== */
+        
+        .tier-section {
+            margin-bottom: 16px;
+            border-radius: 10px;
+            padding: 14px;
+            border: 1px solid var(--border);
+        }
+        
+        .tier-section.tier-emergency {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border-color: #fca5a5;
+        }
+        
+        .tier-section.tier-goals {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-color: #93c5fd;
+        }
+        
+        .tier-section.tier-context {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-color: #cbd5e1;
+        }
+        
+        .tier-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .tier-badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .tier-badge.emergency { background: #ef4444; color: white; }
+        .tier-badge.goals { background: #3b82f6; color: white; }
+        .tier-badge.context { background: #64748b; color: white; }
+        
+        .tier-title { font-weight: 700; font-size: 13px; color: var(--text); }
+        .tier-action { font-size: 11px; color: var(--text-light); font-style: italic; }
+        .tier-guidance { font-size: 10px; color: var(--text-light); margin-bottom: 10px; }
+        
+        /* Emergency buttons */
+        .emergency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+        }
+        
+        .emergency-btn {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 12px;
+            background: white;
+            border: 2px solid #fca5a5;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        
+        .emergency-btn:hover { border-color: #ef4444; transform: translateY(-1px); }
+        .emergency-btn.active { background: #fef2f2; border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2); }
+        
+        .emergency-icon { font-size: 20px; flex-shrink: 0; }
+        .emergency-content { flex: 1; }
+        .emergency-title { font-weight: 600; font-size: 12px; color: var(--text); }
+        .emergency-criteria { font-size: 10px; color: var(--text-light); margin-top: 2px; }
+        
+        .emergency-summary {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fee2e2;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #991b1b;
+        }
+        
+        /* Goal buttons with checkboxes */
+        .goals-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .goal-btn-new {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            background: white;
+            border: 2px solid #93c5fd;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        
+        .goal-btn-new:hover { border-color: #3b82f6; }
+        .goal-btn-new.active { background: #eff6ff; border-color: #3b82f6; }
+        
+        .goal-checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #93c5fd;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        
+        .goal-btn-new.active .goal-checkbox {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+        
+        .goal-checkbox .checkmark {
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .goal-btn-new.active .goal-checkbox .checkmark { opacity: 1; }
+        
+        .goal-content { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .goal-icon-new { font-size: 24px; }
+        .goal-details { flex: 1; }
+        .goal-title-new { font-weight: 600; font-size: 12px; color: var(--text); }
+        .goal-affects { font-size: 10px; color: var(--primary); margin-top: 2px; }
+        .goal-when { font-size: 10px; color: var(--text-light); margin-top: 2px; font-style: italic; }
+        
+        .goals-summary {
+            margin-top: 10px;
+            padding: 10px;
+            background: #dbeafe;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #1e40af;
+        }
+        
+        /* Context buttons */
+        .context-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 6px;
+        }
+        
+        .context-btn {
+            display: flex;
+            flex-direction: column;
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        
+        .context-btn:hover { border-color: #64748b; background: #f8fafc; }
+        .context-btn.active { background: #e2e8f0; border-color: #64748b; }
+        
+        .context-icon { margin-right: 6px; }
+        .context-effect { font-size: 9px; color: var(--text-light); margin-top: 2px; }
+        
+        .step-synthesis {
+            margin-top: 14px;
+            padding: 12px;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 2px solid #10b981;
+            border-radius: 8px;
+        }
+        
+        .step-synthesis-title { font-weight: 700; font-size: 12px; color: #065f46; margin-bottom: 8px; }
+        .step-synthesis-content { font-size: 11px; color: #047857; }
+        
+        /* ==========================================
+           NEW SHOCK PHENOTYPE CARDS
+           ========================================== */
+        
+        .shock-phenotype-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        
+        .shock-card {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        
+        .shock-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .shock-card.active { box-shadow: 0 0 0 3px rgba(var(--selected-rgb), 0.3); }
+        
+        .shock-card-header {
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+        }
+        
+        .shock-card-header.distributive { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .shock-card-header.cardiogenic { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .shock-card-header.hypovolemic { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .shock-card-header.obstructive { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+        .shock-card-header.none { background: linear-gradient(135deg, #10b981, #059669); }
+        
+        .shock-card.active .shock-card-header { box-shadow: inset 0 0 0 2px white; }
+        
+        .shock-icon { font-size: 18px; }
+        .shock-name { font-weight: 700; font-size: 13px; }
+        
+        .shock-card-body { padding: 10px 12px; }
+        .shock-criteria-title { font-size: 10px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; }
+        
+        .shock-criteria-list {
+            margin: 0;
+            padding-left: 16px;
+            font-size: 10px;
+            color: var(--text);
+        }
+        
+        .shock-criteria-list li { margin-bottom: 2px; }
+        .shock-causes { font-size: 9px; color: var(--text-light); margin-top: 6px; font-style: italic; }
+        
+        /* Mixed shock section */
+        .mixed-shock-section {
+            margin-top: 14px;
+            padding: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        
+        .mixed-shock-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .mixed-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .mixed-checkbox:hover { border-color: var(--primary); }
+        .mixed-checkbox input { width: 16px; height: 16px; cursor: pointer; }
+        .mixed-label { font-weight: 600; font-size: 11px; }
+        .mixed-example { font-size: 10px; color: var(--text-light); }
+        
+        .mixed-shock-summary {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #475569;
+        }
+        
+        /* Hemodynamic assessment */
+        .hemo-assessment {
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        .hemo-assessment.safe { background: #d1fae5; border: 1px solid #a7f3d0; color: #065f46; }
+        .hemo-assessment.caution { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; }
+        .hemo-assessment.danger { background: #fecaca; border: 1px solid #fca5a5; color: #991b1b; }
+        
+        .hemo-title { font-weight: 700; margin-bottom: 4px; }
+        .hemo-content { font-size: 11px; }
+        
+        /* POCUS Calculators */
+        .pocus-calc {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+        }
+        
+        .pocus-calc-title { font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 10px; }
+        
+        .pocus-calc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px;
+        }
+        
+        .pocus-item label { display: block; font-size: 10px; color: var(--text-light); margin-bottom: 4px; }
+        .pocus-item select { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 11px; }
+        
+        .pocus-result {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            border: 2px solid var(--border);
+        }
+        
+        .pocus-result-label { font-size: 10px; color: var(--text-light); }
+        .pocus-result-value { font-size: 18px; font-weight: 700; color: var(--primary); margin: 4px 0; }
+        
+        /* Output tabs */
+        .output-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .tab-btn {
+            padding: 8px 14px;
+            border: none;
+            background: var(--border);
+            color: var(--text-light);
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tab-btn:hover { background: #cbd5e1; }
+        .tab-btn.active { background: var(--primary); color: white; }
+        .tab-btn.initiation-tab { background: linear-gradient(135deg, var(--initiation), #a78bfa); color: white; }
+        .tab-btn.initiation-tab.active { background: linear-gradient(135deg, #7c3aed, #8b5cf6); }
+        .tab-btn.transition-tab { background: linear-gradient(135deg, var(--transition), #22d3ee); color: white; }
+        .tab-btn.transition-tab.active { background: linear-gradient(135deg, #0891b2, var(--transition)); }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Recommendation boxes */
+        .recommendation-box {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid var(--primary-light);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .initiation-box {
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+            border: 2px solid #c4b5fd;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .goal-box {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 2px solid #34d399;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .transition-box {
+            background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+            border: 2px solid #67e8f9;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .recommendation-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .recommendation-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+        
+        .recommendation-title { font-size: 16px; font-weight: 700; color: var(--text); }
+        .recommendation-subtitle { font-size: 12px; color: var(--text-light); }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+        
+        .setting-item {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .setting-label { font-size: 10px; color: var(--text-light); margin-bottom: 2px; }
+        .setting-value { font-size: 18px; font-weight: 700; color: var(--primary); }
+        .setting-unit { font-size: 11px; font-weight: normal; color: var(--text-light); }
+        .setting-why { font-size: 9px; color: var(--success); margin-top: 2px; font-style: italic; }
+        
+        .reasoning-section {
+            background: white;
+            border-radius: 8px;
+            padding: 14px;
+            margin-top: 12px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .reasoning-title { font-weight: 600; font-size: 13px; margin-bottom: 6px; color: var(--text); }
+        .reasoning-content { font-size: 12px; color: var(--text-light); line-height: 1.5; }
+        
+        /* UF Recommendation Box - RESTORED from v8.2 */
+        .uf-recommendation {
+            border-radius: 10px;
+            padding: 14px;
+            margin-top: 14px;
+        }
+        
+        .uf-recommendation.conservative {
+            background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+            border: 2px solid #ef4444;
+        }
+        
+        .uf-recommendation.moderate {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+        }
+        
+        .uf-recommendation.liberal {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 2px solid #10b981;
+        }
+        
+        /* Sepsis evidence box */
+        .sepsis-dose-info {
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+            border: 2px solid #c4b5fd;
+            border-radius: 10px;
+            padding: 14px;
+            margin-top: 14px;
+        }
+        
+        .sepsis-dose-info .dose-title {
+            font-weight: 600;
+            color: #7c3aed;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Coffee analogy */
+        .coffee-explainer {
+            background: linear-gradient(135deg, #fef7ed, #fde8d3);
+            border: 2px solid var(--coffee-cream);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        
+        .coffee-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--coffee-brown);
+            margin-bottom: 12px;
+        }
+        
+        .coffee-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        
+        @media (max-width: 900px) { .coffee-grid { grid-template-columns: 1fr; } }
+        
+        .coffee-card {
+            background: white;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .coffee-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .coffee-card.selected { border-color: var(--coffee-brown); background: #fffbeb; }
+        
+        .coffee-icon { font-size: 36px; margin-bottom: 8px; }
+        .coffee-name { font-weight: 700; font-size: 14px; color: var(--coffee-brown); }
+        .coffee-mode { font-weight: 600; font-size: 13px; color: var(--primary); margin: 4px 0; }
+        .coffee-mechanism { font-size: 11px; color: var(--text-light); padding: 8px; background: #f8fafc; border-radius: 6px; margin: 8px 0; }
+        .coffee-best-for { font-size: 10px; color: var(--text); padding: 6px 8px; background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 4px; }
+        
+        /* Criteria items */
+        .criteria-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .criteria-item:last-child { border-bottom: none; }
+        
+        .criteria-status {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .criteria-met { background: #d1fae5; color: #065f46; }
+        .criteria-warning { background: #fef3c7; color: #92400e; }
+        .criteria-not-met { background: #fecaca; color: #991b1b; }
+        
+        /* Initiation criteria box */
+        .initiation-criteria {
+            background: white;
+            border-radius: 8px;
+            padding: 14px;
+            margin-top: 10px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        /* Monitoring timeline */
+        .monitoring-timeline {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        
+        .timeline-column {
+            flex: 0 0 auto;
+            min-width: 150px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .timeline-header {
+            padding: 10px 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        .timeline-header.yellow { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .timeline-header.green { background: linear-gradient(135deg, #22c55e, #16a34a); }
+        .timeline-header.purple { background: linear-gradient(135deg, #a855f7, #9333ea); }
+        .timeline-header.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .timeline-header.gray { background: linear-gradient(135deg, #6b7280, #4b5563); }
+        
+        .timeline-body { padding: 10px; }
+        
+        .timeline-item {
+            padding: 6px 8px;
+            margin-bottom: 6px;
+            background: var(--bg);
+            border-radius: 6px;
+            font-size: 11px;
+        }
+        
+        .timeline-item:last-child { margin-bottom: 0; }
+        .timeline-item .param { font-weight: 600; color: var(--text); }
+        .timeline-item .freq { color: var(--text-light); font-size: 10px; }
+        .timeline-item .target { color: var(--primary); font-weight: 500; margin-top: 2px; }
+        
+        /* Key insight */
+        .key-insight {
+            background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+            border: 2px solid #c4b5fd;
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        
+        .key-insight-title { font-weight: 700; font-size: 12px; color: #7c3aed; margin-bottom: 6px; }
+        .key-insight-content { font-size: 11px; color: var(--text); line-height: 1.5; }
+        
+        /* Acidosis framework */
+        .acidosis-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            background: #f8fafc;
+        }
+        
+        .step-number {
+            width: 26px;
+            height: 26px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        .step-content { flex: 1; }
+        .step-title { font-weight: 600; font-size: 12px; color: var(--text); }
+        .step-desc { font-size: 11px; color: var(--text-light); }
+        .step-value { font-weight: 700; color: var(--primary); }
+        
+        /* Evidence list */
+        .evidence-item {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+        
+        .evidence-item:last-child { border-bottom: none; }
+        .evidence-item .study { font-weight: 600; color: var(--text); margin-bottom: 2px; }
+        .evidence-item .finding { color: var(--text-light); }
+        
+        /* Data warning */
+        .data-warning {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #92400e;
+            margin-bottom: 12px;
+        }
+        
+        /* Circuit alert */
+        .circuit-alert {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 11px;
+            color: #92400e;
+            margin-top: 10px;
+        }
+        
+        .circuit-alert.danger {
+            background: #fef2f2;
+            border-color: #fca5a5;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🩺 REINA - Goal-Directed RRT Decision Support <span class="version-badge">v9.4</span> <span class="live-badge">● LIVE</span></h1>
+            <p>☕ Coffee Analogy • 🎯 Goal-Directed Prescription • 💧 Personalised UF Rationale <span class="restored-badge">RESTORED</span> • 💉 Full Anticoag Tab <span class="restored-badge">RESTORED</span> • 🫀 Multi-Select Shock <span class="new-badge">NEW</span></p>
+        </header>
+        
+        <div class="main-grid">
+            <!-- INPUT PANEL -->
+            <div class="input-panel">
+                <!-- STEP 1: WHY RRT? -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>🎯 STEP 1: Why Does This Patient Need RRT?</h2>
+                    </div>
+                    
+                    <!-- TIER 1: EMERGENCY INDICATIONS -->
+                    <div class="tier-section tier-emergency">
+                        <div class="tier-header">
+                            <span class="tier-badge emergency">TIER 1</span>
+                            <span class="tier-title">Emergency Indications</span>
+                            <span class="tier-action">→ START NOW if present</span>
+                        </div>
+                        <p class="tier-guidance">Life-threatening complications requiring immediate RRT regardless of other factors. Select ALL that apply.</p>
+                        <div class="emergency-grid">
+                            <button class="emergency-btn" data-field="uremic-enceph" onclick="toggleEmergency(this)">
+                                <div class="emergency-icon">🧠</div>
+                                <div class="emergency-content">
+                                    <div class="emergency-title">Uraemic Encephalopathy</div>
+                                    <div class="emergency-criteria">Confusion, asterixis, seizures with elevated urea</div>
+                                </div>
+                            </button>
+                            <button class="emergency-btn" data-field="uremic-pericarditis" onclick="toggleEmergency(this)">
+                                <div class="emergency-icon">💔</div>
+                                <div class="emergency-content">
+                                    <div class="emergency-title">Uraemic Pericarditis</div>
+                                    <div class="emergency-criteria">Pericardial rub, ECG changes, risk of tamponade</div>
+                                </div>
+                            </button>
+                            <button class="emergency-btn" data-field="refractory-pulm-edema" onclick="toggleEmergency(this)">
+                                <div class="emergency-icon">🫁</div>
+                                <div class="emergency-content">
+                                    <div class="emergency-title">Refractory Pulmonary Oedema</div>
+                                    <div class="emergency-criteria">Hypoxia despite diuretics, NIPPV/intubation needed</div>
+                                </div>
+                            </button>
+                            <button class="emergency-btn" data-field="refractory-k" onclick="toggleEmergency(this)">
+                                <div class="emergency-icon">⚡</div>
+                                <div class="emergency-content">
+                                    <div class="emergency-title">Refractory Hyperkalaemia</div>
+                                    <div class="emergency-criteria">K⁺ >6.5 with ECG changes despite medical Rx</div>
+                                </div>
+                            </button>
+                            <button class="emergency-btn" data-field="severe-acidosis" onclick="toggleEmergency(this)">
+                                <div class="emergency-icon">🧪</div>
+                                <div class="emergency-content">
+                                    <div class="emergency-title">Severe Metabolic Acidosis</div>
+                                    <div class="emergency-criteria">pH <7.1 or HCO₃ <10, not responding to ventilation</div>
+                                </div>
+                            </button>
+                            <button class="emergency-btn" data-field="toxin-removal" onclick="toggleEmergency(this)">
+                                <div class="emergency-icon">☠️</div>
+                                <div class="emergency-content">
+                                    <div class="emergency-title">Dialysable Toxin/Overdose</div>
+                                    <div class="emergency-criteria">Lithium, methanol, ethylene glycol, salicylates, metformin</div>
+                                </div>
+                            </button>
+                        </div>
+                        <div id="emergency-summary" class="emergency-summary" style="display: none;"></div>
+                    </div>
+                    
+                    <!-- TIER 2: TREATMENT GOALS -->
+                    <div class="tier-section tier-goals">
+                        <div class="tier-header">
+                            <span class="tier-badge goals">TIER 2</span>
+                            <span class="tier-title">Treatment Goals</span>
+                            <span class="tier-action">→ What must RRT achieve?</span>
+                        </div>
+                        <p class="tier-guidance">Select ALL goals that apply. Each goal affects prescription parameters. System will optimise for all selected goals.</p>
+                        <div class="goals-grid">
+                            <button class="goal-btn-new" data-goal="volume" onclick="toggleGoal(this)">
+                                <div class="goal-checkbox"><span class="checkmark">✓</span></div>
+                                <div class="goal-content">
+                                    <div class="goal-icon-new">💧</div>
+                                    <div class="goal-details">
+                                        <div class="goal-title-new">Volume Removal</div>
+                                        <div class="goal-affects">Affects: UF rate, fluid balance target</div>
+                                        <div class="goal-when">When: Fluid overload >10%, pulmonary oedema, diuretic failure</div>
+                                    </div>
+                                </div>
+                            </button>
+                            <button class="goal-btn-new" data-goal="acidosis" onclick="toggleGoal(this)">
+                                <div class="goal-checkbox"><span class="checkmark">✓</span></div>
+                                <div class="goal-content">
+                                    <div class="goal-icon-new">🧪</div>
+                                    <div class="goal-details">
+                                        <div class="goal-title-new">Acid-Base Correction</div>
+                                        <div class="goal-affects">Affects: Dialysate buffer, dose intensity</div>
+                                        <div class="goal-when">When: pH <7.2, HCO₃ <15, compensation exhausted</div>
+                                    </div>
+                                </div>
+                            </button>
+                            <button class="goal-btn-new" data-goal="potassium" onclick="toggleGoal(this)">
+                                <div class="goal-checkbox"><span class="checkmark">✓</span></div>
+                                <div class="goal-content">
+                                    <div class="goal-icon-new">⚡</div>
+                                    <div class="goal-details">
+                                        <div class="goal-title-new">Potassium Control</div>
+                                        <div class="goal-affects">Affects: Dialysate K⁺, monitoring frequency</div>
+                                        <div class="goal-when">When: K⁺ >6.0, recurrent hyperkalaemia, ongoing release</div>
+                                    </div>
+                                </div>
+                            </button>
+                            <button class="goal-btn-new" data-goal="solute" onclick="toggleGoal(this)">
+                                <div class="goal-checkbox"><span class="checkmark">✓</span></div>
+                                <div class="goal-content">
+                                    <div class="goal-icon-new">🩸</div>
+                                    <div class="goal-details">
+                                        <div class="goal-title-new">Solute Clearance</div>
+                                        <div class="goal-affects">Affects: Effluent dose, modality choice</div>
+                                        <div class="goal-when">When: Uraemic symptoms, BUN >100, azotaemia complications</div>
+                                    </div>
+                                </div>
+                            </button>
+                            <button class="goal-btn-new" data-goal="sodium" onclick="toggleGoal(this)">
+                                <div class="goal-checkbox"><span class="checkmark">✓</span></div>
+                                <div class="goal-content">
+                                    <div class="goal-icon-new">🧂</div>
+                                    <div class="goal-details">
+                                        <div class="goal-title-new">Sodium Management</div>
+                                        <div class="goal-affects">Affects: Dialysate Na⁺, correction rate</div>
+                                        <div class="goal-when">When: Na⁺ <120 or >160, requires controlled correction</div>
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                        <div id="goals-summary" class="goals-summary" style="display: none;"></div>
+                    </div>
+                    
+                    <!-- TIER 3: MODIFYING CONTEXT -->
+                    <div class="tier-section tier-context">
+                        <div class="tier-header">
+                            <span class="tier-badge context">TIER 3</span>
+                            <span class="tier-title">Clinical Context</span>
+                            <span class="tier-action">→ Modifies approach</span>
+                        </div>
+                        <p class="tier-guidance">Background factors that influence modality, anticoagulation, or special considerations.</p>
+                        <div class="context-grid">
+                            <button class="context-btn" data-context="sepsis" onclick="toggleContext(this)">
+                                <span class="context-icon">🦠</span> Sepsis/SIRS
+                                <span class="context-effect">→ Consider Oxiris, cytokine clearance</span>
+                            </button>
+                            <button class="context-btn" data-context="cardiorenal" onclick="toggleContext(this)">
+                                <span class="context-icon">💔</span> Cardiorenal Syndrome
+                                <span class="context-effect">→ Gentle UF, avoid preload depletion</span>
+                            </button>
+                            <button class="context-btn" data-context="liver" onclick="toggleContext(this)">
+                                <span class="context-icon">🫀</span> Hepatorenal/Liver Failure
+                                <span class="context-effect">→ Citrate caution, coagulopathy</span>
+                            </button>
+                            <button class="context-btn" data-context="rhabdo" onclick="toggleContext(this)">
+                                <span class="context-icon">💪</span> Rhabdomyolysis
+                                <span class="context-effect">→ High flux, avoid citrate (Ca load)</span>
+                            </button>
+                            <button class="context-btn" data-context="tls" onclick="toggleContext(this)">
+                                <span class="context-icon">🧬</span> Tumour Lysis Syndrome
+                                <span class="context-effect">→ High dose, avoid citrate (PO₃ binds Ca)</span>
+                            </button>
+                            <button class="context-btn" data-context="brain-injury" onclick="toggleContext(this)">
+                                <span class="context-icon">🧠</span> Brain Injury/ICP Concerns
+                                <span class="context-effect">→ Avoid osmolar shifts, slow correction</span>
+                            </button>
+                            <button class="context-btn" data-context="post-cardiac" onclick="toggleContext(this)">
+                                <span class="context-icon">🫀</span> Post-Cardiac Surgery
+                                <span class="context-effect">→ Often mixed shock, anticoag considerations</span>
+                            </button>
+                            <button class="context-btn" data-context="ecmo" onclick="toggleContext(this)">
+                                <span class="context-icon">🔄</span> On ECMO
+                                <span class="context-effect">→ Use ECMO anticoag, inline connection</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="step1-synthesis" class="step-synthesis" style="display: none;"></div>
+                </div>
+                
+                <!-- STEP 2: HEMODYNAMIC ASSESSMENT -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>🫀 STEP 2: Pre-RRT Hemodynamic Check <span class="cct-badge">Dr. Prager</span></h2>
+                    </div>
+                    
+                    <p style="font-size: 11px; color: var(--text-light); margin-bottom: 12px;">
+                        <strong>"Are you treating the right phenotype of shock?"</strong> ~50% of CRRT hypotension is NOT preload-dependent. Wrong diagnosis = wrong treatment.
+                    </p>
+                    
+                    <div class="section-label">Shock Phenotype <span class="new-badge">MULTI-SELECT</span> <span class="info-icon">i
+                        <div class="tooltip" style="width: 320px;">
+                            <div class="tooltip-title">Why Phenotype Matters</div>
+                            Starting CRRT on cardiogenic shock (congested) is different from distributive shock (vasodilated). UF in distributive shock may worsen hypotension. Volume in cardiogenic worsens congestion. Select ALL phenotypes present for mixed shock.
+                            <div class="tooltip-ref">Dr. Ross Prager - Shock Calculator</div>
+                        </div>
+                    </span></div>
+                    
+                    <p style="font-size: 10px; color: var(--text-light); margin-bottom: 10px;">Select ALL shock types that are present. ICU patients often have mixed shock phenotypes.</p>
+                    
+                    <div class="shock-phenotype-grid">
+                        <button class="shock-card" data-shock="distributive" onclick="toggleShock(this)">
+                            <div class="shock-card-header distributive">
+                                <span class="shock-icon">🔥</span>
+                                <span class="shock-name">Distributive</span>
+                            </div>
+                            <div class="shock-card-body">
+                                <div class="shock-criteria-title">Clinical Features:</div>
+                                <ul class="shock-criteria-list">
+                                    <li>Warm peripheries</li>
+                                    <li>Wide pulse pressure (>40 mmHg)</li>
+                                    <li>Low SVR, high CO pattern</li>
+                                    <li>Flash capillary refill</li>
+                                </ul>
+                                <div class="shock-causes">Sepsis, anaphylaxis, neurogenic, adrenal crisis</div>
+                            </div>
+                        </button>
+                        
+                        <button class="shock-card" data-shock="cardiogenic" onclick="toggleShock(this)">
+                            <div class="shock-card-header cardiogenic">
+                                <span class="shock-icon">💔</span>
+                                <span class="shock-name">Cardiogenic</span>
+                            </div>
+                            <div class="shock-card-body">
+                                <div class="shock-criteria-title">Clinical Features:</div>
+                                <ul class="shock-criteria-list">
+                                    <li>Cool peripheries</li>
+                                    <li>Narrow pulse pressure (<25% SBP)</li>
+                                    <li>Elevated JVP/CVP</li>
+                                    <li>S3 gallop, pulmonary oedema</li>
+                                </ul>
+                                <div class="shock-causes">MI, cardiomyopathy, arrhythmia, valve failure</div>
+                            </div>
+                        </button>
+                        
+                        <button class="shock-card" data-shock="hypovolemic" onclick="toggleShock(this)">
+                            <div class="shock-card-header hypovolemic">
+                                <span class="shock-icon">🩸</span>
+                                <span class="shock-name">Hypovolaemic</span>
+                            </div>
+                            <div class="shock-card-body">
+                                <div class="shock-criteria-title">Clinical Features:</div>
+                                <ul class="shock-criteria-list">
+                                    <li>Cool peripheries</li>
+                                    <li>Flat JVP, collapsed IVC</li>
+                                    <li>Tachycardia, narrow PP</li>
+                                    <li>Poor skin turgor</li>
+                                </ul>
+                                <div class="shock-causes">Haemorrhage, dehydration, third-spacing, burns</div>
+                            </div>
+                        </button>
+                        
+                        <button class="shock-card" data-shock="obstructive" onclick="toggleShock(this)">
+                            <div class="shock-card-header obstructive">
+                                <span class="shock-icon">🚫</span>
+                                <span class="shock-name">Obstructive</span>
+                            </div>
+                            <div class="shock-card-body">
+                                <div class="shock-criteria-title">Clinical Features:</div>
+                                <ul class="shock-criteria-list">
+                                    <li>PE: RV strain, elevated RV pressure</li>
+                                    <li>Tamponade: JVD, pulsus paradoxus</li>
+                                    <li>Tension PTX: tracheal deviation</li>
+                                    <li>Context-dependent signs</li>
+                                </ul>
+                                <div class="shock-causes">PE, tamponade, tension pneumo, critical AS</div>
+                            </div>
+                        </button>
+                        
+                        <button class="shock-card" data-shock="none" onclick="toggleShock(this)">
+                            <div class="shock-card-header none">
+                                <span class="shock-icon">✅</span>
+                                <span class="shock-name">No Shock</span>
+                            </div>
+                            <div class="shock-card-body">
+                                <div class="shock-criteria-title">Clinical Features:</div>
+                                <ul class="shock-criteria-list">
+                                    <li>MAP >65 without pressors</li>
+                                    <li>Normal lactate</li>
+                                    <li>Adequate perfusion</li>
+                                    <li>No organ dysfunction from shock</li>
+                                </ul>
+                                <div class="shock-causes">May still need RRT for other indications</div>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <!-- Shock selection summary - for multi-select feedback -->
+                    <div id="shock-selection-summary" class="shock-selection-summary" style="display: none; margin-top: 12px; padding: 10px 12px; background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: 2px solid #38bdf8; border-radius: 8px; font-size: 11px; color: #0369a1;"></div>
+                    
+                    <div class="section-label" style="margin-top: 16px;">Blood Pressure <span class="required-tag">REQUIRED</span></div>
+                    <div class="input-group">
+                        <div class="input-row">
+                            <label>Systolic BP</label>
+                            <input type="number" id="sbp" min="50" max="250" placeholder="—">
+                            <span class="unit-suffix">mmHg</span>
+                        </div>
+                        <div class="input-row">
+                            <label>Diastolic BP</label>
+                            <input type="number" id="dbp" min="20" max="150" placeholder="—">
+                            <span class="unit-suffix">mmHg</span>
+                        </div>
+                        <div id="bp-calcs" class="auto-calc-display" style="display: none;">
+                            MAP: <span class="calc-value" id="map-calc">—</span> mmHg | Pulse Pressure: <span class="calc-value" id="pp-calc">—</span> mmHg
+                        </div>
+                    </div>
+                    
+                    <div class="section-label">Vasopressor Support</div>
+                    <div class="input-group">
+                        <div class="input-row">
+                            <label>Noradrenaline</label>
+                            <input type="number" id="norepi" min="0" max="2" step="0.01" placeholder="0">
+                            <span class="unit-suffix">μg/kg/min</span>
+                        </div>
+                        <div class="input-row">
+                            <label>Vasopressin</label>
+                            <select id="vasopressin">
+                                <option value="0">Not on vasopressin</option>
+                                <option value="1.8">1.8 units/hr</option>
+                                <option value="2.4">2.4 units/hr</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="hemo-assessment" class="hemo-assessment safe">
+                        <div class="hemo-title">ℹ️ Enter blood pressure to assess</div>
+                        <div class="hemo-content">Hemodynamic assessment will update automatically.</div>
+                    </div>
+                    
+                    <!-- POCUS Section -->
+                    <div class="section-label">POCUS Findings <span class="optional-tag">OPTIONAL</span></div>
+                    
+                    <div class="pocus-calc">
+                        <div class="pocus-calc-title">📐 VExUS Grade Calculator</div>
+                        <div class="pocus-calc-grid">
+                            <div class="pocus-item">
+                                <label>IVC Diameter</label>
+                                <select id="ivc-diam" onchange="calculateVExUS()">
+                                    <option value="">Not assessed</option>
+                                    <option value="normal">≤2cm (Normal)</option>
+                                    <option value="dilated">>2cm (Dilated)</option>
+                                </select>
+                            </div>
+                            <div class="pocus-item">
+                                <label>Hepatic Vein</label>
+                                <select id="hepatic-vein" onchange="calculateVExUS()">
+                                    <option value="">Not assessed</option>
+                                    <option value="normal">Normal (S>D)</option>
+                                    <option value="mild">Mild (S=D)</option>
+                                    <option value="severe">Severe (S reversal)</option>
+                                </select>
+                            </div>
+                            <div class="pocus-item">
+                                <label>Portal Vein</label>
+                                <select id="portal-vein" onchange="calculateVExUS()">
+                                    <option value="">Not assessed</option>
+                                    <option value="normal">Normal (continuous)</option>
+                                    <option value="mild">Mild (pulsatile <50%)</option>
+                                    <option value="severe">Severe (pulsatile ≥50%)</option>
+                                </select>
+                            </div>
+                            <div class="pocus-item">
+                                <label>Renal Vein</label>
+                                <select id="renal-vein" onchange="calculateVExUS()">
+                                    <option value="">Not assessed</option>
+                                    <option value="normal">Normal (continuous)</option>
+                                    <option value="mild">Mild (pulsatile)</option>
+                                    <option value="severe">Severe (discontinuous)</option>
+                                </select>
+                            </div>
+                            <div class="pocus-result" id="vexus-result">
+                                <div class="pocus-result-label">VExUS Grade</div>
+                                <div class="pocus-result-value" id="vexus-grade">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pocus-calc" style="margin-top: 8px;">
+                        <div class="pocus-calc-title">📐 Renal Resistive Index (RRI)</div>
+                        <div class="pocus-calc-grid">
+                            <div class="pocus-item">
+                                <label>Peak Systolic Velocity</label>
+                                <input type="number" id="psv" min="0" max="200" step="0.1" placeholder="cm/s" onchange="calculateRRI()" style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 11px;">
+                            </div>
+                            <div class="pocus-item">
+                                <label>End Diastolic Velocity</label>
+                                <input type="number" id="edv" min="0" max="100" step="0.1" placeholder="cm/s" onchange="calculateRRI()" style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 11px;">
+                            </div>
+                            <div class="pocus-result" id="rri-result">
+                                <div class="pocus-result-label">RRI = (PSV - EDV) / PSV</div>
+                                <div class="pocus-result-value" id="rri-value">—</div>
+                                <div class="pocus-result-label" id="rri-interpretation"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-row" style="margin-top: 12px;">
+                        <label>LV Function</label>
+                        <select id="lv-function" class="wide-select">
+                            <option value="">Not assessed</option>
+                            <option value="normal">Normal (EF >50%)</option>
+                            <option value="mild-mod">Mild-Mod ↓ (EF 30-50%)</option>
+                            <option value="severe">Severe ↓ (EF <30%)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- PATIENT DATA -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📋 Patient Data</h2>
+                    </div>
+                    
+                    <div class="section-label">Demographics <span class="required-tag">REQUIRED</span></div>
+                    <div class="input-group">
+                        <div class="input-row">
+                            <label>Weight</label>
+                            <input type="number" id="weight" min="30" max="200" placeholder="kg">
+                            <span class="unit-suffix">kg</span>
+                        </div>
+                    </div>
+                    
+                    <div class="section-label">AKI Status</div>
+                    <div class="input-group">
+                        <div class="input-row">
+                            <label>AKI Stage (KDIGO)</label>
+                            <select id="aki-stage" class="wide-select">
+                                <option value="">Not assessed</option>
+                                <option value="1">Stage 1</option>
+                                <option value="2">Stage 2</option>
+                                <option value="3">Stage 3</option>
+                            </select>
+                        </div>
+                        <div class="input-row">
+                            <label>AKI Aetiology</label>
+                            <select id="aki-etiology" class="wide-select">
+                                <option value="">Unknown</option>
+                                <option value="sepsis">Sepsis-associated AKI</option>
+                                <option value="cardiac">Post-cardiac surgery</option>
+                                <option value="cardiorenal">Cardiorenal syndrome</option>
+                                <option value="hepatorenal">Hepatorenal syndrome</option>
+                                <option value="rhabdo">Rhabdomyolysis</option>
+                                <option value="tls">Tumour lysis syndrome</option>
+                                <option value="other">Other/Mixed</option>
+                            </select>
+                        </div>
+                        <div class="input-row">
+                            <label>AKI Duration</label>
+                            <select id="aki-duration">
+                                <option value="<24h">&lt;24 hours</option>
+                                <option value="24-48h">24-48 hours</option>
+                                <option value="48-72h">48-72 hours</option>
+                                <option value=">72h">&gt;72 hours</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="section-label">Acid-Base & Electrolytes <span class="required-tag">KEY PARAMETERS</span></div>
+                    <div class="input-group">
+                        <div class="input-row">
+                            <label>pH</label>
+                            <input type="number" id="ph" min="6.8" max="7.8" step="0.01" placeholder="7.xx">
+                            <span class="info-icon">i
+                                <div class="tooltip">
+                                    <div class="tooltip-title">pH First!</div>
+                                    First step: Look at pH to determine primary disorder. Don't assume low HCO3 = acidosis.
+                                    <div class="tooltip-ref">CCT - Metabolic Acidosis Episode</div>
+                                </div>
+                            </span>
+                        </div>
+                        <div class="input-row">
+                            <label>HCO₃ (Bicarbonate)</label>
+                            <input type="number" id="hco3" min="5" max="40" placeholder="mmol/L">
+                            <span class="unit-suffix">mmol/L</span>
+                        </div>
+                        <div class="input-row">
+                            <label>pCO₂</label>
+                            <input type="number" id="pco2" min="15" max="100" placeholder="mmHg">
+                            <span class="unit-suffix">mmHg</span>
+                        </div>
+                        <div class="input-row">
+                            <label>Lactate</label>
+                            <input type="number" id="lactate" min="0" max="30" step="0.1" placeholder="mmol/L">
+                            <span class="unit-suffix">mmol/L</span>
+                        </div>
+                        <div class="input-row">
+                            <label>Potassium (K⁺)</label>
+                            <input type="number" id="potassium" min="2" max="10" step="0.1" placeholder="mmol/L">
+                            <span class="unit-suffix">mmol/L</span>
+                        </div>
+                        <div class="input-row">
+                            <label>Sodium (Na⁺)</label>
+                            <input type="number" id="sodium" min="100" max="180" placeholder="mmol/L">
+                            <span class="unit-suffix">mmol/L</span>
+                        </div>
+                        <div class="input-row">
+                            <label>Chloride (Cl⁻)</label>
+                            <input type="number" id="chloride" min="70" max="130" placeholder="mmol/L">
+                            <span class="unit-suffix">mmol/L</span>
+                        </div>
+                        <div class="input-row">
+                            <label>Urea</label>
+                            <input type="number" id="urea" min="1" max="100" placeholder="mmol/L">
+                            <span class="unit-suffix">mmol/L</span>
+                        </div>
+                        <div class="input-row">
+                            <label>Creatinine</label>
+                            <input type="number" id="creatinine" min="50" max="2000" placeholder="μmol/L">
+                            <span class="unit-suffix">μmol/L</span>
+                        </div>
+                    </div>
+                    
+                    <div id="anion-gap-calc" class="auto-calc-display" style="display: none;">
+                        Anion Gap: <span class="calc-value" id="ag-value">—</span> | Delta Ratio: <span class="calc-value" id="delta-value">—</span>
+                    </div>
+                    
+                    <div class="section-label">Fluid Status</div>
+                    <div class="input-group">
+                        <div class="input-row">
+                            <label>Cumulative Balance</label>
+                            <input type="number" id="fluid-balance" min="-5000" max="20000" placeholder="ml">
+                            <span class="unit-suffix">ml</span>
+                        </div>
+                        <div class="input-row">
+                            <label>Target Balance (24h)</label>
+                            <input type="number" id="target-balance" min="-6000" max="0" step="100" value="-1000">
+                            <span class="unit-suffix">ml</span>
+                        </div>
+                        <div class="input-row">
+                            <label>Diuretic Response</label>
+                            <select id="diuretic-response" class="wide-select">
+                                <option value="not-tried">Not yet trialled</option>
+                                <option value="responsive">Responsive</option>
+                                <option value="partial">Partial</option>
+                                <option value="refractory">Refractory</option>
+                            </select>
+                        </div>
+                        <div class="input-row">
+                            <label>Urine Output (24h)</label>
+                            <input type="number" id="urine-output" min="0" max="5000" placeholder="ml/24h">
+                            <span class="unit-suffix">ml/24h</span>
+                        </div>
+                        <div id="uo-rate-calc" class="auto-calc-display" style="display: none;">
+                            Urine rate: <span class="calc-value" id="uo-rate">—</span> ml/kg/hr | Fluid overload: <span class="calc-value" id="fo-percent">—</span>%
+                        </div>
+                    </div>
+                    
+                    <div class="section-label">Coagulation <span class="citrate-tag">FOR ANTICOAG SELECTION</span></div>
+                    <div class="input-group">
+                        <div class="input-row">
+                            <label>Platelets</label>
+                            <input type="number" id="platelets" min="0" max="1000" placeholder="×10⁹/L">
+                            <span class="unit-suffix">×10⁹/L</span>
+                            <span class="info-icon">i
+                                <div class="tooltip">
+                                    <div class="tooltip-title">Platelet Threshold</div>
+                                    Platelets &lt;80×10⁹/L = heparin contraindication. Consider citrate or no anticoag.
+                                    <div class="tooltip-ref">Cochrane Review 2020</div>
+                                </div>
+                            </span>
+                        </div>
+                        <div class="input-row">
+                            <label>INR</label>
+                            <input type="number" id="inr" min="0.8" max="10" step="0.1" placeholder="—">
+                        </div>
+                        <div class="input-row">
+                            <label>APTT</label>
+                            <input type="number" id="aptt" min="20" max="200" placeholder="seconds">
+                            <span class="unit-suffix">seconds</span>
+                        </div>
+                    </div>
+                    
+                    <div class="section-label">Liver Function <span class="citrate-tag">FOR CITRATE SAFETY</span></div>
+                    <div class="input-row">
+                        <label>Liver Status</label>
+                        <select id="liver-status" class="wide-select">
+                            <option value="normal">Normal</option>
+                            <option value="mild">Mild Dysfunction</option>
+                            <option value="cirrhosis">Cirrhosis (Compensated)</option>
+                            <option value="cirrhosis-decomp">Cirrhosis (Decompensated)</option>
+                            <option value="fulminant">Fulminant Liver Failure</option>
+                        </select>
+                        <span class="info-icon">i
+                            <div class="tooltip">
+                                <div class="tooltip-title">Liver & Citrate</div>
+                                Citrate is metabolised by liver. Mild-moderate = use citrate with closer monitoring. Fulminant = relative contraindication.
+                                <div class="tooltip-ref">KDIGO 2012; van der Voort 2009</div>
+                            </div>
+                        </span>
+                    </div>
+                    
+                    <div class="section-label">Clinical Conditions</div>
+                    <div class="condition-grid">
+                        <button class="condition-btn danger" data-field="active-bleeding" onclick="toggleCondition(this)">Active Bleeding</button>
+                        <button class="condition-btn" data-field="septic-shock" onclick="toggleCondition(this)">Septic Shock</button>
+                        <button class="condition-btn" data-field="cardiorenal" onclick="toggleCondition(this)">Cardiorenal</button>
+                        <button class="condition-btn" data-field="post-cardiac" onclick="toggleCondition(this)">Post-Cardiac Surgery</button>
+                        <button class="condition-btn danger" data-field="rhabdo" onclick="toggleCondition(this)">Rhabdomyolysis</button>
+                        <button class="condition-btn danger" data-field="tumor-lysis" onclick="toggleCondition(this)">Tumour Lysis</button>
+                        <button class="condition-btn warning" data-field="hit" onclick="toggleCondition(this)">HIT Risk/Confirmed</button>
+                        <button class="condition-btn" data-field="brain-injury" onclick="toggleCondition(this)">Brain Injury</button>
+                        <button class="condition-btn" data-field="on-ecmo" onclick="toggleCondition(this)">On ECMO</button>
+                        <button class="condition-btn warning" data-field="recent-surgery" onclick="toggleCondition(this)">Recent Surgery</button>
+                    </div>
+                    
+                    <div class="section-label">Circuit History <span class="optional-tag">IF ALREADY ON CRRT</span></div>
+                    <div class="input-group">
+                        <div class="input-row">
+                            <label>Previous Circuit Clotting</label>
+                            <select id="prev-circuit-clot">
+                                <option value="none">No previous circuits</option>
+                                <option value="no-issues">No clotting issues</option>
+                                <option value="occasional">Occasional early clotting</option>
+                                <option value="recurrent">Recurrent clotting</option>
+                            </select>
+                        </div>
+                        <div class="input-row">
+                            <label>Average Filter Life</label>
+                            <select id="filter-life">
+                                <option value="">N/A - not on CRRT</option>
+                                <option value="good">&gt;48h</option>
+                                <option value="moderate">24-48h</option>
+                                <option value="poor">12-24h</option>
+                                <option value="very-poor">&lt;12h</option>
+                            </select>
+                        </div>
+                        <div class="input-row">
+                            <label>Access Site</label>
+                            <select id="access-site">
+                                <option value="">Not placed yet</option>
+                                <option value="rijv">Right Internal Jugular</option>
+                                <option value="lijv">Left Internal Jugular</option>
+                                <option value="femoral">Femoral</option>
+                                <option value="subclavian">Subclavian</option>
+                            </select>
+                        </div>
+                        <div class="input-row">
+                            <label>Access Function</label>
+                            <select id="access-function">
+                                <option value="">N/A</option>
+                                <option value="good">Good flow (>200ml/min)</option>
+                                <option value="moderate">Moderate (occasional alarms)</option>
+                                <option value="poor">Poor (frequent alarms)</option>
+                                <option value="dysfunction">Dysfunction</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="circuit-alert-container"></div>
+                </div>
+            </div>
+            
+            <!-- OUTPUT PANEL -->
+            <div class="output-panel">
+                <div class="output-tabs">
+                    <button class="tab-btn initiation-tab active" onclick="showTab('initiation')">⏱️ Initiation</button>
+                    <button class="tab-btn" onclick="showTab('goal-analysis')">🎯 Goal</button>
+                    <button class="tab-btn" onclick="showTab('modality')">☕ Modality</button>
+                    <button class="tab-btn" onclick="showTab('anticoag')">💉 Anticoag</button>
+                    <button class="tab-btn" onclick="showTab('prescription')">💊 Prescription</button>
+                    <button class="tab-btn" onclick="showTab('monitoring')">📊 Monitoring</button>
+                    <button class="tab-btn" onclick="showTab('acidosis')">🧪 Acidosis</button>
+                    <button class="tab-btn transition-tab" onclick="showTab('transition')">🎯 Transition</button>
+                    <button class="tab-btn" onclick="showTab('evidence')">📚 Evidence</button>
+                </div>
+                
+                <div id="tab-initiation" class="tab-content active"></div>
+                <div id="tab-goal-analysis" class="tab-content"></div>
+                <div id="tab-modality" class="tab-content"></div>
+                <div id="tab-anticoag" class="tab-content"></div>
+                <div id="tab-prescription" class="tab-content"></div>
+                <div id="tab-monitoring" class="tab-content"></div>
+                <div id="tab-acidosis" class="tab-content"></div>
+                <div id="tab-transition" class="tab-content"></div>
+                <div id="tab-evidence" class="tab-content"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ==========================================
+        // STATE & UI HANDLERS - NEW TIERED SYSTEM
+        // ==========================================
+        
+        // Tier 1: Emergency indications (multiple allowed)
+        let activeEmergencies = {};
+        
+        // Tier 2: Treatment goals (multiple allowed)
+        let activeGoals = {};
+        
+        // Tier 3: Clinical context (multiple allowed)
+        let activeContexts = {};
+        
+        // Shock phenotype - NOW MULTI-SELECT
+        let selectedShocks = {};
+        let mixedShockComponents = {};
+        
+        // Legacy conditions (for Patient Data section)
+        let activeConditions = {};
+        
+        // Tier 1: Emergency toggle
+        function toggleEmergency(el) {
+            el.classList.toggle('active');
+            activeEmergencies[el.dataset.field] = el.classList.contains('active');
+            updateEmergencySummary();
+            updateStep1Synthesis();
+            updateAll();
+        }
+        
+        // Tier 2: Goal toggle
+        function toggleGoal(el) {
+            el.classList.toggle('active');
+            activeGoals[el.dataset.goal] = el.classList.contains('active');
+            updateGoalsSummary();
+            updateStep1Synthesis();
+            updateAll();
+        }
+        
+        // Tier 3: Context toggle
+        function toggleContext(el) {
+            el.classList.toggle('active');
+            activeContexts[el.dataset.context] = el.classList.contains('active');
+            
+            // Sync with activeConditions for backward compatibility
+            const contextToCondition = {
+                'sepsis': 'septic-shock',
+                'rhabdo': 'rhabdo',
+                'tls': 'tumor-lysis',
+                'brain-injury': 'brain-injury',
+                'post-cardiac': 'post-cardiac',
+                'ecmo': 'on-ecmo',
+                'cardiorenal': 'cardiorenal'
+            };
+            if (contextToCondition[el.dataset.context]) {
+                activeConditions[contextToCondition[el.dataset.context]] = el.classList.contains('active');
+            }
+            
+            updateStep1Synthesis();
+            updateAll();
+        }
+        
+        // Shock phenotype selection - NOW MULTI-SELECT
+        function toggleShock(el) {
+            const shockType = el.dataset.shock;
+            
+            // If selecting "No Shock", deselect all others
+            if (shockType === 'none') {
+                if (el.classList.contains('active')) {
+                    el.classList.remove('active');
+                    selectedShocks[shockType] = false;
+                } else {
+                    // Deselect all others
+                    document.querySelectorAll('.shock-card').forEach(b => {
+                        b.classList.remove('active');
+                        selectedShocks[b.dataset.shock] = false;
+                    });
+                    el.classList.add('active');
+                    selectedShocks[shockType] = true;
+                }
+            } else {
+                // Deselect "No Shock" if selecting any other type
+                const noShockBtn = document.querySelector('.shock-card[data-shock="none"]');
+                if (noShockBtn) {
+                    noShockBtn.classList.remove('active');
+                    selectedShocks['none'] = false;
+                }
+                
+                // Toggle the clicked shock type
+                el.classList.toggle('active');
+                selectedShocks[shockType] = el.classList.contains('active');
+            }
+            
+            updateShockSummary();
+            updateAll();
+        }
+        
+        // Update shock selection summary
+        function updateShockSummary() {
+            const summary = document.getElementById('shock-selection-summary');
+            if (!summary) return;
+            
+            const activeShocks = Object.entries(selectedShocks).filter(([k, v]) => v).map(([k]) => k);
+            
+            if (activeShocks.length === 0) {
+                summary.style.display = 'none';
+                return;
+            }
+            
+            const shockNames = {
+                'distributive': '🔥 Distributive (vasodilated)',
+                'cardiogenic': '💔 Cardiogenic (pump failure)',
+                'hypovolemic': '🩸 Hypovolaemic (volume depleted)',
+                'obstructive': '🚫 Obstructive (mechanical)',
+                'none': '✅ No Shock'
+            };
+            
+            let content = '<strong>Selected Shock Phenotype(s):</strong><br>';
+            content += activeShocks.map(s => shockNames[s] || s).join('<br>');
+            
+            if (activeShocks.length > 1 && !activeShocks.includes('none')) {
+                content += '<br><br><strong>⚠️ Mixed Shock:</strong> Management should address all components. Consider echo/POCUS to quantify each.';
+            }
+            
+            summary.innerHTML = content;
+            summary.style.display = 'block';
+        }
+        
+        // Mixed shock component toggle (legacy - for backward compatibility)
+        function updateMixedShock() {
+            mixedShockComponents = {
+                distributive: document.getElementById('mixed-distributive')?.checked || false,
+                cardiogenic: document.getElementById('mixed-cardiogenic')?.checked || false,
+                hypovolemic: document.getElementById('mixed-hypovolemic')?.checked || false
+            };
+            
+            const summary = document.getElementById('mixed-shock-summary');
+            if (!summary) return;
+            
+            const components = [];
+            if (mixedShockComponents.distributive) components.push('Distributive');
+            if (mixedShockComponents.cardiogenic) components.push('Cardiogenic');
+            if (mixedShockComponents.hypovolemic) components.push('Hypovolaemic');
+            
+            if (components.length > 0) {
+                summary.innerHTML = `<strong>Mixed components:</strong> ${components.join(' + ')}`;
+                summary.style.display = 'block';
+            } else {
+                summary.style.display = 'none';
+            }
+            
+            updateAll();
+        }
+        
+        // Update emergency summary
+        function updateEmergencySummary() {
+            const summary = document.getElementById('emergency-summary');
+            const active = Object.entries(activeEmergencies).filter(([k, v]) => v).map(([k]) => k);
+            
+            if (active.length > 0) {
+                const names = {
+                    'uremic-enceph': 'Uraemic Encephalopathy',
+                    'uremic-pericarditis': 'Uraemic Pericarditis',
+                    'refractory-pulm-edema': 'Refractory Pulmonary Oedema',
+                    'refractory-k': 'Refractory Hyperkalaemia',
+                    'severe-acidosis': 'Severe Metabolic Acidosis',
+                    'toxin-removal': 'Dialysable Toxin'
+                };
+                summary.innerHTML = `⚠️ <strong>EMERGENCY: START RRT NOW</strong><br>${active.map(a => names[a] || a).join(', ')}`;
+                summary.style.display = 'block';
+            } else {
+                summary.style.display = 'none';
+            }
+        }
+        
+        // Update goals summary
+        function updateGoalsSummary() {
+            const summary = document.getElementById('goals-summary');
+            const active = Object.entries(activeGoals).filter(([k, v]) => v).map(([k]) => k);
+            
+            if (active.length > 0) {
+                const goalEffects = {
+                    'volume': 'UF rate optimisation',
+                    'acidosis': 'Buffer delivery',
+                    'potassium': 'K⁺ clearance',
+                    'solute': 'Effluent dose',
+                    'sodium': 'Na⁺ management'
+                };
+                const effects = active.map(g => goalEffects[g]).filter(Boolean);
+                summary.innerHTML = `<strong>Selected goals (${active.length}):</strong> ${effects.join(' • ')}`;
+                summary.style.display = 'block';
+            } else {
+                summary.style.display = 'none';
+            }
+        }
+        
+        // Update Step 1 synthesis
+        function updateStep1Synthesis() {
+            const synthesis = document.getElementById('step1-synthesis');
+            const hasEmergency = Object.values(activeEmergencies).some(v => v);
+            const hasGoals = Object.values(activeGoals).some(v => v);
+            const hasContext = Object.values(activeContexts).some(v => v);
+            
+            if (hasEmergency || hasGoals || hasContext) {
+                let html = '<div class="step-synthesis-title">📋 Step 1 Summary</div><div class="step-synthesis-content">';
+                
+                if (hasEmergency) {
+                    html += '<strong style="color: #991b1b;">⚡ Emergency indication present → Initiate RRT immediately</strong><br>';
+                }
+                
+                if (hasGoals) {
+                    const goals = Object.entries(activeGoals).filter(([k, v]) => v).map(([k]) => k);
+                    html += `<strong>Treatment goals:</strong> ${goals.join(', ')}<br>`;
+                }
+                
+                if (hasContext) {
+                    const contexts = Object.entries(activeContexts).filter(([k, v]) => v).map(([k]) => k);
+                    html += `<strong>Modifying factors:</strong> ${contexts.join(', ')}`;
+                }
+                
+                html += '</div>';
+                synthesis.innerHTML = html;
+                synthesis.style.display = 'block';
+            } else {
+                synthesis.style.display = 'none';
+            }
+        }
+        
+        // Legacy condition toggle (for Patient Data section)
+        function toggleCondition(el) {
+            el.classList.toggle('active');
+            activeConditions[el.dataset.field] = el.classList.contains('active');
+            updateAll();
+        }
+        
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // ==========================================
+        // CALCULATORS
+        // ==========================================
+        function calculateBP() {
+            const sbp = parseFloat(document.getElementById('sbp').value);
+            const dbp = parseFloat(document.getElementById('dbp').value);
+            
+            if (sbp && dbp) {
+                const map = Math.round((sbp + 2 * dbp) / 3);
+                const pp = sbp - dbp;
+                document.getElementById('map-calc').textContent = map;
+                document.getElementById('pp-calc').textContent = pp;
+                document.getElementById('bp-calcs').style.display = 'flex';
+                return { map, pp };
+            }
+            document.getElementById('bp-calcs').style.display = 'none';
+            return { map: null, pp: null };
+        }
+        
+        function calculateAnionGap() {
+            const na = parseFloat(document.getElementById('sodium').value);
+            const cl = parseFloat(document.getElementById('chloride').value);
+            const hco3 = parseFloat(document.getElementById('hco3').value);
+            
+            if (na && cl && hco3) {
+                const ag = na - cl - hco3;
+                const deltaAG = ag - 12;
+                const expectedHCO3 = 24 - deltaAG;
+                const deltaRatio = deltaAG / (24 - hco3);
+                
+                document.getElementById('ag-value').textContent = ag.toFixed(0);
+                document.getElementById('delta-value').textContent = isFinite(deltaRatio) ? deltaRatio.toFixed(2) : '—';
+                document.getElementById('anion-gap-calc').style.display = 'flex';
+                return { ag, deltaRatio };
+            }
+            document.getElementById('anion-gap-calc').style.display = 'none';
+            return { ag: null, deltaRatio: null };
+        }
+        
+        function calculateUrineRate() {
+            const weight = parseFloat(document.getElementById('weight').value);
+            const uo = parseFloat(document.getElementById('urine-output').value);
+            const fb = parseFloat(document.getElementById('fluid-balance').value);
+            
+            if (weight && uo) {
+                const uoRate = (uo / 24 / weight).toFixed(2);
+                document.getElementById('uo-rate').textContent = uoRate;
+                
+                if (weight && fb) {
+                    const foPercent = ((fb / 1000) / weight * 100).toFixed(1);
+                    document.getElementById('fo-percent').textContent = foPercent;
+                } else {
+                    document.getElementById('fo-percent').textContent = '—';
+                }
+                
+                document.getElementById('uo-rate-calc').style.display = 'flex';
+                return parseFloat(uoRate);
+            }
+            document.getElementById('uo-rate-calc').style.display = 'none';
+            return null;
+        }
+        
+        function calculateVExUS() {
+            const ivc = document.getElementById('ivc-diam').value;
+            const hv = document.getElementById('hepatic-vein').value;
+            const pv = document.getElementById('portal-vein').value;
+            const rv = document.getElementById('renal-vein').value;
+            
+            let grade = '—';
+            let severity = 0;
+            
+            if (ivc === 'normal') {
+                grade = '0';
+            } else if (ivc === 'dilated') {
+                const severeCount = [hv, pv, rv].filter(v => v === 'severe').length;
+                const mildCount = [hv, pv, rv].filter(v => v === 'mild').length;
+                
+                if (severeCount >= 2) {
+                    grade = '3 - Severe';
+                    severity = 3;
+                } else if (severeCount === 1 || mildCount >= 2) {
+                    grade = '2 - Moderate';
+                    severity = 2;
+                } else if (mildCount === 1) {
+                    grade = '1 - Mild';
+                    severity = 1;
+                } else if (hv || pv || rv) {
+                    grade = '0';
+                }
+            }
+            
+            document.getElementById('vexus-grade').textContent = grade;
+            return severity;
+        }
+        
+        function calculateRRI() {
+            const psv = parseFloat(document.getElementById('psv').value);
+            const edv = parseFloat(document.getElementById('edv').value);
+            
+            if (psv && edv && psv > 0) {
+                const rri = ((psv - edv) / psv).toFixed(2);
+                document.getElementById('rri-value').textContent = rri;
+                
+                let interp = '';
+                if (rri >= 0.75) {
+                    interp = '⚠️ Elevated - suggests ATN';
+                } else if (rri >= 0.72) {
+                    interp = '⚠️ Borderline elevated';
+                } else {
+                    interp = '✓ Normal range';
+                }
+                document.getElementById('rri-interpretation').textContent = interp;
+                return parseFloat(rri);
+            }
+            document.getElementById('rri-value').textContent = '—';
+            document.getElementById('rri-interpretation').textContent = '';
+            return null;
+        }
+        
+        function updateHemoAssessment() {
+            const { map, pp } = calculateBP();
+            const norepi = parseFloat(document.getElementById('norepi').value) || 0;
+            const vasopressin = parseFloat(document.getElementById('vasopressin').value) || 0;
+            
+            const el = document.getElementById('hemo-assessment');
+            let status = 'safe';
+            let title = '✅ Stable Hemodynamics';
+            let content = 'Low risk of CRRT-related hypotension. Standard UF rates appropriate.';
+            
+            if (norepi >= 0.3 || (norepi > 0 && vasopressin > 0)) {
+                status = 'danger';
+                title = '🚨 High Vasopressor Support';
+                content = 'High risk of CRRT-related hypotension. Use conservative UF rates (50-100 ml/hr). Consider preload assessment before starting.';
+            } else if (norepi >= 0.1) {
+                status = 'caution';
+                title = '⚠️ Moderate Vasopressor Support';
+                content = 'Moderate risk. Use cautious UF rates (75-150 ml/hr). Monitor MAP closely during therapy.';
+            } else if (map && map < 65) {
+                status = 'caution';
+                title = '⚠️ Low MAP';
+                content = `MAP ${map} mmHg is below target. Optimise hemodynamics before aggressive UF.`;
+            }
+            
+            if (pp && pp < 30) {
+                status = 'danger';
+                title = '🚨 Narrow Pulse Pressure';
+                content = `PP ${pp} mmHg suggests low cardiac output. Urgent echo/POCUS recommended. Risk of cardiogenic shock - be very cautious with UF.`;
+            }
+            
+            el.className = `hemo-assessment ${status}`;
+            el.querySelector('.hemo-title').textContent = title;
+            el.querySelector('.hemo-content').textContent = content;
+            
+            return status;
+        }
+        
+        function updateCircuitAlerts() {
+            const clotHistory = document.getElementById('prev-circuit-clot').value;
+            const filterLife = document.getElementById('filter-life').value;
+            const accessFn = document.getElementById('access-function').value;
+            
+            let alerts = [];
+            
+            if (clotHistory === 'recurrent') {
+                alerts.push({ type: 'danger', msg: 'Recurrent clotting → Strongly favour citrate anticoag. Check access function, consider predilution.' });
+            }
+            if (filterLife === 'very-poor' || filterLife === 'poor') {
+                alerts.push({ type: 'warning', msg: 'Short filter life → Optimise anticoag, check filtration fraction (<25%), address access issues.' });
+            }
+            if (accessFn === 'dysfunction' || accessFn === 'poor') {
+                alerts.push({ type: 'warning', msg: 'Access dysfunction → This contributes to clotting. Consider catheter exchange if persistent.' });
+            }
+            
+            const container = document.getElementById('circuit-alert-container');
+            container.innerHTML = alerts.map(a => `<div class="circuit-alert ${a.type}">${a.msg}</div>`).join('');
+        }
+        
+        // ==========================================
+        // DATA COLLECTION
+        // ==========================================
+        function collectData() {
+            const { map, pp } = calculateBP();
+            const uoRate = calculateUrineRate();
+            const weight = parseFloat(document.getElementById('weight').value) || null;
+            const fb = parseFloat(document.getElementById('fluid-balance').value) || null;
+            
+            // Derive primary goal from activeGoals for backward compatibility
+            const goalPriority = ['volume', 'acidosis', 'potassium', 'solute', 'sodium'];
+            let primaryGoal = null;
+            for (const g of goalPriority) {
+                if (activeGoals[g]) { primaryGoal = g; break; }
+            }
+            
+            return {
+                weight,
+                sbp: parseFloat(document.getElementById('sbp').value) || null,
+                dbp: parseFloat(document.getElementById('dbp').value) || null,
+                map,
+                pp,
+                norepi: parseFloat(document.getElementById('norepi').value) || 0,
+                vasopressin: parseFloat(document.getElementById('vasopressin').value) || 0,
+                ph: parseFloat(document.getElementById('ph').value) || null,
+                hco3: parseFloat(document.getElementById('hco3').value) || null,
+                pco2: parseFloat(document.getElementById('pco2').value) || null,
+                lactate: parseFloat(document.getElementById('lactate').value) || null,
+                potassium: parseFloat(document.getElementById('potassium').value) || null,
+                sodium: parseFloat(document.getElementById('sodium').value) || null,
+                chloride: parseFloat(document.getElementById('chloride').value) || null,
+                urea: parseFloat(document.getElementById('urea').value) || null,
+                creatinine: parseFloat(document.getElementById('creatinine').value) || null,
+                fluidBalance: fb,
+                targetBalance: parseFloat(document.getElementById('target-balance').value) || -1000,
+                diureticResponse: document.getElementById('diuretic-response').value,
+                urineOutput: parseFloat(document.getElementById('urine-output').value) || null,
+                uoRate,
+                foPercent: (weight && fb) ? (fb / 1000 / weight * 100) : null,
+                platelets: parseFloat(document.getElementById('platelets').value) || null,
+                inr: parseFloat(document.getElementById('inr').value) || null,
+                aptt: parseFloat(document.getElementById('aptt').value) || null,
+                liverStatus: document.getElementById('liver-status').value,
+                akiStage: document.getElementById('aki-stage').value,
+                akiEtiology: document.getElementById('aki-etiology').value,
+                akiDuration: document.getElementById('aki-duration').value,
+                prevCircuitClot: document.getElementById('prev-circuit-clot').value,
+                filterLife: document.getElementById('filter-life').value,
+                accessSite: document.getElementById('access-site').value,
+                accessFunction: document.getElementById('access-function').value,
+                lvFunction: document.getElementById('lv-function').value,
+                vexusGrade: calculateVExUS(),
+                rri: calculateRRI(),
+                // New tiered system
+                emergencies: activeEmergencies,
+                goals: activeGoals,
+                contexts: activeContexts,
+                // Backward compatibility
+                selectedGoal: primaryGoal,
+                selectedShocks,
+                mixedShockComponents,
+                conditions: activeConditions
+            };
+        }
+        
+        // ==========================================
+        // CLINICAL ASSESSMENTS
+        // ==========================================
+        function assessInitiation(data) {
+            const assessment = {
+                urgentIndications: [],
+                relativeIndications: [],
+                canWait: [],
+                urgencyLevel: 'watchful-waiting',
+                avoidanceChance: 50
+            };
+            
+            // URGENT - from Tier 1 Emergency Indications
+            if (data.potassium && data.potassium >= 6.5) assessment.urgentIndications.push({ criterion: `K⁺ ${data.potassium} ≥6.5 mmol/L`, action: 'Start RRT after medical stabilisation' });
+            if (data.ph && data.ph < 7.15) assessment.urgentIndications.push({ criterion: `pH ${data.ph} <7.15`, action: 'Start RRT - severe acidaemia' });
+            
+            // New: Use activeEmergencies from Tier 1
+            if (activeEmergencies['uremic-enceph']) assessment.urgentIndications.push({ criterion: 'Uraemic Encephalopathy', action: 'Start RRT immediately' });
+            if (activeEmergencies['uremic-pericarditis']) assessment.urgentIndications.push({ criterion: 'Uraemic Pericarditis', action: 'Start RRT immediately' });
+            if (activeEmergencies['refractory-pulm-edema']) assessment.urgentIndications.push({ criterion: 'Refractory Pulmonary Oedema', action: 'Start RRT for fluid removal' });
+            if (activeEmergencies['refractory-k']) assessment.urgentIndications.push({ criterion: 'Refractory Hyperkalaemia', action: 'Start RRT - medical therapy failed' });
+            if (activeEmergencies['severe-acidosis']) assessment.urgentIndications.push({ criterion: 'Severe Metabolic Acidosis (pH <7.1)', action: 'Start RRT - ventilation not compensating' });
+            if (activeEmergencies['toxin-removal']) assessment.urgentIndications.push({ criterion: 'Dialysable Toxin/Overdose', action: 'Start RRT per EXTRIP (EXtracorporeal TReatments In Poisoning) guidelines' });
+            
+            // RELATIVE - from Tier 2 Goals and lab values
+            if (data.potassium && data.potassium >= 6.0 && data.potassium < 6.5) assessment.relativeIndications.push({ criterion: `K⁺ ${data.potassium} mmol/L`, action: 'Medical therapy first, RRT if refractory' });
+            if (data.ph && data.ph >= 7.15 && data.ph < 7.25) assessment.relativeIndications.push({ criterion: `pH ${data.ph}`, action: 'Optimise medical Rx, monitor closely' });
+            if (data.uoRate && data.uoRate < 0.3 && data.akiDuration === '>72h') assessment.relativeIndications.push({ criterion: 'Oliguria >72h', action: 'Consider RRT per AKIKI criteria' });
+            if (data.urea && data.urea > 40) assessment.relativeIndications.push({ criterion: `Urea ${data.urea} mmol/L`, action: 'Monitor for uraemic symptoms' });
+            if (data.foPercent && data.foPercent > 10) assessment.relativeIndications.push({ criterion: `Fluid overload ${data.foPercent.toFixed(1)}%`, action: 'Consider UF if diuretic-resistant' });
+            
+            // From selected goals
+            if (activeGoals['volume'] && data.diureticResponse === 'refractory') assessment.relativeIndications.push({ criterion: 'Diuretic-refractory fluid overload', action: 'RRT for volume management' });
+            if (activeGoals['acidosis'] && data.ph && data.ph < 7.25) assessment.relativeIndications.push({ criterion: 'Acidosis correction goal + pH <7.25', action: 'Consider RRT for buffer delivery' });
+            
+            // Can wait
+            if (data.potassium && data.potassium < 6.0) assessment.canWait.push({ criterion: `K⁺ ${data.potassium} <6.0`, detail: 'Monitor Q6h' });
+            if (data.ph && data.ph >= 7.25) assessment.canWait.push({ criterion: `pH ${data.ph} ≥7.25`, detail: 'Acceptable' });
+            if (data.uoRate && data.uoRate >= 0.5) assessment.canWait.push({ criterion: `UO ${data.uoRate} ≥0.5 ml/kg/hr`, detail: 'Renal recovery possible' });
+            
+            // Urgency level
+            if (assessment.urgentIndications.length > 0) {
+                assessment.urgencyLevel = 'urgent';
+                assessment.overallRecommendation = 'URGENT: Start RRT - life-threatening indication present';
+                assessment.avoidanceChance = 5;
+            } else if (assessment.relativeIndications.length >= 2) {
+                assessment.urgencyLevel = 'consider';
+                assessment.overallRecommendation = 'CONSIDER RRT: Multiple relative indications present';
+                assessment.avoidanceChance = 25;
+            } else if (assessment.relativeIndications.length === 1) {
+                assessment.urgencyLevel = 'monitor';
+                assessment.overallRecommendation = 'MONITOR: One relative indication - optimise conservative management';
+                assessment.avoidanceChance = 40;
+            } else {
+                assessment.urgencyLevel = 'watchful-waiting';
+                assessment.overallRecommendation = 'WATCHFUL WAITING: Continue conservative management';
+                assessment.avoidanceChance = 50;
+            }
+            
+            return assessment;
+        }
+        
+        function selectModality(data) {
+            let selected = 'cvvhdf';
+            let rationale = 'Combined diffusion + convection - most versatile for multiple goals';
+            const goals = data.goals || {};
+            
+            // Priority-based selection when multiple goals present
+            const hasVolume = goals.volume;
+            const hasAcidosis = goals.acidosis;
+            const hasPotassium = goals.potassium;
+            const hasSolute = goals.solute;
+            const hasSodium = goals.sodium;
+            const hasSepsis = activeContexts['sepsis'];
+            
+            // Single dominant goal scenarios - now includes CVVH
+            if (hasVolume && !hasPotassium && !hasAcidosis && !hasSolute && (!data.potassium || data.potassium < 5.5) && (!data.ph || data.ph > 7.3)) {
+                selected = 'scuf';
+                rationale = 'Pure volume overload without significant clearance needs → SCUF (Slow Continuous Ultrafiltration)';
+            } else if (hasVolume && !hasPotassium && !hasSodium && (!data.potassium || data.potassium < 5.5)) {
+                selected = 'cvvh';
+                rationale = 'Volume removal with medium molecule clearance → CVVH (Continuous Venovenous Haemofiltration). Convection-based.';
+            } else if ((hasPotassium || hasSodium) && !hasVolume && !hasSepsis) {
+                selected = 'cvvhd';
+                rationale = 'Diffusion (dialysis) most efficient for small molecule clearance (K⁺, Na⁺, toxins). CVVHD = Continuous Venovenous Haemodialysis.';
+            } else if (hasSepsis && !hasPotassium && (!data.potassium || data.potassium < 6)) {
+                selected = 'cvvhdf';
+                rationale = 'Sepsis context: CVVHDF provides combined clearance. Note: cytokine removal is mainly by ADSORPTION not convection - consider Oxiris filter.';
+            } else if ((hasVolume || hasAcidosis) && (hasPotassium || hasSolute)) {
+                selected = 'cvvhdf';
+                rationale = 'Multiple goals present → CVVHDF provides both diffusion + convection for comprehensive clearance';
+            }
+            
+            return { selected, rationale };
+        }
+        
+        function selectAnticoagulation(data) {
+            const result = {
+                rec: 'citrate',
+                name: 'Regional Citrate Anticoagulation (Regiocit)',
+                rationale: [],
+                citrateContra: [],
+                heparinContra: [],
+                evidence: [],
+                circuitConsiderations: []
+            };
+            
+            // Citrate contraindications - check both activeContexts (Tier 3) and activeConditions (Patient Data)
+            if (activeContexts['rhabdo'] || activeConditions['rhabdo']) result.citrateContra.push('Rhabdomyolysis (high calcium load from muscle breakdown)');
+            if (activeContexts['tls'] || activeConditions['tumor-lysis']) result.citrateContra.push('Tumour lysis syndrome (high phosphate binds calcium)');
+            if (activeContexts['liver'] || ['fulminant', 'cirrhosis-decomp'].includes(data.liverStatus)) result.citrateContra.push('Severe liver dysfunction (impaired citrate metabolism)');
+            if (data.lactate && data.lactate > 8) result.citrateContra.push(`Severe lactic acidosis (lactate ${data.lactate}) - impaired metabolism`);
+            
+            // Heparin contraindications
+            if (data.platelets && data.platelets < 80) result.heparinContra.push(`Platelets ${data.platelets} <80×10⁹/L`);
+            if (activeConditions['hit']) result.heparinContra.push('HIT risk/confirmed');
+            if (data.inr && data.inr > 2.0) result.heparinContra.push(`INR ${data.inr} >2.0`);
+            if (data.aptt && data.aptt > 53) result.heparinContra.push(`APTT ${data.aptt}s >53`);
+            if (activeConditions['active-bleeding']) result.heparinContra.push('Active bleeding');
+            if (activeConditions['recent-surgery']) result.heparinContra.push('Recent surgery');
+            
+            // Circuit considerations (from v8.2)
+            if (data.prevCircuitClot === 'recurrent') {
+                result.circuitConsiderations.push('Recurrent clotting → strongly favour citrate (40% longer filter life)');
+            }
+            if (data.filterLife === 'very-poor' || data.filterLife === 'poor') {
+                result.circuitConsiderations.push('Short filter life → optimise anticoag + check access');
+            }
+            if (data.accessFunction === 'dysfunction' || data.accessFunction === 'poor') {
+                result.circuitConsiderations.push('Access dysfunction contributes to clotting → address access first');
+            }
+            
+            // Decision
+            if (result.citrateContra.length === 0) {
+                result.rec = 'citrate';
+                result.name = 'Regional Citrate Anticoagulation (Regiocit)';
+                result.rationale = [
+                    'Citrate chelates calcium in circuit → prevents clotting locally',
+                    'No systemic anticoagulation effect → reduced bleeding risk',
+                    'Citrate metabolised by liver → generates bicarbonate (buffer effect)'
+                ];
+                result.evidence = [
+                    { study: 'Cochrane 2020 (14 RCTs, 1,879 patients)', finding: '60% reduction in bleeding events vs heparin' },
+                    { study: 'Filter life meta-analysis', finding: '40% longer filter life with citrate (median 40h vs 24h)' },
+                    { study: 'KDIGO 2012 Guidelines', finding: 'Regional citrate recommended over heparin in patients without contraindications' }
+                ];
+            } else if (result.heparinContra.length > 0) {
+                result.rec = 'none';
+                result.name = 'No Anticoagulation';
+                result.rationale = [
+                    `Citrate contraindicated: ${result.citrateContra[0]}`,
+                    `Heparin contraindicated: ${result.heparinContra[0]}`,
+                    'Use predilution mode to reduce filtration fraction'
+                ];
+                result.evidence = [
+                    { study: 'MICU Protocol', finding: 'No anticoag = third-line. Expect shorter filter life (12-24h)' }
+                ];
+            } else {
+                result.rec = 'heparin';
+                result.name = 'Systemic Heparin';
+                result.rationale = [
+                    `Citrate contraindicated: ${result.citrateContra[0]}`,
+                    'Use low-dose heparin for circuit anticoag (not therapeutic)',
+                    'Target APTT 45-60 seconds',
+                    'Monitor for HIT with prolonged use'
+                ];
+                result.evidence = [
+                    { study: 'MICU Protocol', finding: 'Heparin is second-line after citrate' },
+                    { study: 'Cochrane 2020', finding: 'Higher bleeding risk vs citrate' }
+                ];
+            }
+            
+            // ECMO override - check both contexts and conditions
+            if (activeContexts['ecmo'] || activeConditions['on-ecmo']) {
+                if (activeConditions['hit']) {
+                    result.rec = 'bivalirudin';
+                    result.name = 'Bivalirudin (ECMO + HIT)';
+                    result.rationale = ['On ECMO with HIT - use bivalirudin per ECMO protocol'];
+                } else {
+                    result.rec = 'system-heparin';
+                    result.name = 'Systemic Heparin via ECMO';
+                    result.rationale = ['On ECMO - use ECMO anticoag protocol. CRRT in-line with ECMO circuit.'];
+                }
+            }
+            
+            return result;
+        }
+        
+        // UF Rate Recommendation - RESTORED from v8.2
+        function recommendUFRate(data) {
+            const result = {
+                recommended: 100,
+                category: 'moderate',
+                rationale: [],
+                physiologicalBasis: [],
+                evidence: [],
+                maxSafe: 200
+            };
+            
+            const hemoStatus = updateHemoAssessment();
+            const targetBalance = Math.abs(data.targetBalance || 1000);
+            
+            if (hemoStatus === 'danger' || data.norepi >= 0.3) {
+                result.category = 'conservative';
+                result.recommended = Math.min(75, targetBalance / 24);
+                result.maxSafe = 100;
+                result.rationale = [
+                    'High vasopressor support indicates compromised cardiovascular reserve',
+                    'Aggressive fluid removal may precipitate hypotension and worsen organ perfusion',
+                    'Prioritise hemodynamic stability over achieving negative balance'
+                ];
+                result.physiologicalBasis = [
+                    'UF removes intravascular volume faster than interstitial refilling (2-4 ml/min)',
+                    'In shock, capillary refill already impaired → high UF worsens hypoperfusion',
+                    'Target: slow, steady removal that MAP tolerates'
+                ];
+                result.evidence = [
+                    { study: 'FACTT Trial', finding: 'Conservative fluid strategy improved outcomes - but in stable patients' },
+                    { study: 'Clinical consensus', finding: 'UF <100 ml/hr when MAP-dependent on pressors' }
+                ];
+            } else if (hemoStatus === 'caution' || data.norepi >= 0.1) {
+                result.category = 'moderate';
+                result.recommended = Math.min(125, targetBalance / 24);
+                result.maxSafe = 175;
+                result.rationale = [
+                    'Moderate vasopressor support allows cautious fluid removal',
+                    'Monitor MAP response during UF - reduce if MAP drops >10%'
+                ];
+                result.physiologicalBasis = [
+                    'Moderate reserve allows plasma refilling to partially compensate',
+                    'Balance fluid removal with perfusion maintenance'
+                ];
+                result.evidence = [
+                    { study: 'Bouchard 2009', finding: 'Fluid overload >10% associated with mortality in AKI' }
+                ];
+            } else {
+                result.category = 'liberal';
+                result.recommended = Math.min(200, targetBalance / 24);
+                result.maxSafe = 250;
+                result.rationale = [
+                    'No or minimal vasopressor support indicates good cardiovascular reserve',
+                    'Can achieve target fluid balance more rapidly if needed'
+                ];
+                result.physiologicalBasis = [
+                    'Adequate cardiac output allows for plasma volume refilling',
+                    'Higher UF tolerated without significant hemodynamic compromise'
+                ];
+                result.evidence = [
+                    { study: 'FACTT Trial', finding: 'Conservative strategy safe and beneficial in ARDS' }
+                ];
+            }
+            
+            // Weight-based maximum
+            if (data.weight) {
+                const weightMax = Math.round(data.weight * 2); // ~2 ml/kg/hr max
+                result.maxSafe = Math.min(result.maxSafe, weightMax);
+            }
+            
+            result.recommended = Math.round(result.recommended);
+            
+            return result;
+        }
+        
+        function selectFilter(data) {
+            const septicIndicated = activeContexts['sepsis'] || activeConditions['septic-shock'] || data.akiEtiology === 'sepsis';
+            
+            if (septicIndicated) {
+                return {
+                    recommended: 'Consider Oxiris',
+                    rationale: 'Sepsis indication - Oxiris for endotoxin/cytokine adsorption within first 24-48h',
+                    evidence: 'Oxiris = heparin-grafted AN69 with endotoxin binding. Note: Does NOT extend filter life.'
+                };
+            }
+            return {
+                recommended: 'M100',
+                rationale: 'Standard AN69 membrane for routine CRRT',
+                evidence: 'M100 is default filter per local protocol'
+            };
+        }
+        
+        function generatePrescription(data, modality, anticoag, ufRec, filter) {
+            const weight = data.weight || 70;
+            const mode = modality.selected.toUpperCase();
+            
+            const prescribedDose = 25; // ml/kg/hr
+            const totalEffluent = Math.round(prescribedDose * weight);
+            let bloodFlow = weight < 60 ? 150 : (weight > 75 ? 200 : 180);
+            
+            let dialysate = 0, replacement = 0;
+            if (mode === 'CVVHDF') {
+                dialysate = Math.round(totalEffluent * 0.5);
+                replacement = Math.round(totalEffluent * 0.5);
+            } else if (mode === 'CVVHD') {
+                dialysate = totalEffluent;
+            } else if (mode === 'CVVH') {
+                replacement = totalEffluent;
+            } else if (mode === 'SCUF') {
+                // SCUF = just UF, no dialysate/replacement
+            }
+            
+            // Citrate settings
+            let citrateFlow = 0;
+            let caInfusion = 0;
+            if (anticoag.rec === 'citrate') {
+                citrateFlow = Math.round(bloodFlow * 1.5);
+                caInfusion = Math.round(citrateFlow * 0.02 * 60);
+            }
+            
+            // Check for sepsis
+            const severeSepsis = activeConditions['septic-shock'] || 
+                (activeConditions['sepsis'] && data.akiEtiology === 'sepsis');
+            
+            return {
+                mode,
+                bloodFlow,
+                dialysate,
+                replacement,
+                totalEffluent,
+                prescribedDose,
+                ufRate: ufRec.recommended,
+                ufRec,
+                citrateFlow,
+                caInfusion,
+                anticoag: anticoag.name,
+                anticoagRec: anticoag.rec,
+                anticoagRationale: anticoag.rationale[0] || '',
+                filter: filter.recommended,
+                severeSepsis
+            };
+        }
+        
+        function assessTransition(data) {
+            const transition = {
+                recommendation: 'Continue CRRT',
+                transitionCriteria: [],
+                liberationCriteria: []
+            };
+            
+            // Transition criteria
+            transition.transitionCriteria.push({
+                criterion: 'MAP ≥65 without vasopressors',
+                met: data.norepi === 0 && data.map && data.map >= 65
+            });
+            transition.transitionCriteria.push({
+                criterion: 'Tolerating intermittent ultrafiltration',
+                met: data.norepi < 0.1
+            });
+            
+            // Liberation criteria
+            transition.liberationCriteria.push({
+                criterion: 'Urine output ≥500ml/24h or ≥0.5 ml/kg/hr',
+                met: (data.urineOutput && data.urineOutput >= 500) || (data.uoRate && data.uoRate >= 0.5),
+                detail: data.uoRate ? `Current: ${data.uoRate} ml/kg/hr` : 'Not calculated'
+            });
+            transition.liberationCriteria.push({
+                criterion: 'Creatinine plateau or decreasing',
+                met: false,
+                detail: 'Check trend'
+            });
+            transition.liberationCriteria.push({
+                criterion: 'No urgent RRT indications',
+                met: (!data.potassium || data.potassium < 6.0) && (!data.ph || data.ph >= 7.25)
+            });
+            
+            const libMetCount = transition.liberationCriteria.filter(c => c.met).length;
+            if (libMetCount >= 2) {
+                transition.recommendation = 'Consider RRT Liberation Trial';
+            } else if (transition.transitionCriteria.every(c => c.met)) {
+                transition.recommendation = 'Consider Transition to Intermittent HD';
+            }
+            
+            return transition;
+        }
+        
+        // ==========================================
+        // RENDER FUNCTIONS
+        // ==========================================
+        function renderInitiation(initiation, data) {
+            const urgencyColors = {
+                'urgent': '#ef4444',
+                'consider': '#f59e0b',
+                'monitor': '#eab308',
+                'watchful-waiting': '#22c55e'
+            };
+            
+            let html = '';
+            
+            // Data warning
+            const missingFields = [];
+            if (!data.weight) missingFields.push('Weight');
+            if (!data.ph) missingFields.push('pH');
+            if (!data.potassium) missingFields.push('Potassium');
+            
+            if (missingFields.length > 0) {
+                html += `<div class="data-warning">⚠️ Missing key data: ${missingFields.join(', ')}. Please complete for accurate assessment.</div>`;
+            }
+            
+            html += `
+                <div class="initiation-box">
+                    <div class="recommendation-header">
+                        <div class="recommendation-icon" style="background: ${urgencyColors[initiation.urgencyLevel]}">⏱️</div>
+                        <div>
+                            <div class="recommendation-title" style="color: ${urgencyColors[initiation.urgencyLevel]}">${initiation.overallRecommendation}</div>
+                            <div class="recommendation-subtitle">RRT avoidance likelihood: ~${initiation.avoidanceChance}% (STARRT-AKI data)</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (initiation.urgentIndications.length > 0) {
+                html += `<div class="initiation-criteria" style="border-left-color: #ef4444;">
+                    <div class="reasoning-title">🚨 Urgent Indications</div>
+                    ${initiation.urgentIndications.map(i => `<div class="criteria-item"><div class="criteria-status criteria-not-met">!</div><div><strong>${i.criterion}</strong> → ${i.action}</div></div>`).join('')}
+                </div>`;
+            }
+            
+            if (initiation.relativeIndications.length > 0) {
+                html += `<div class="initiation-criteria" style="border-left-color: #f59e0b; margin-top: 10px;">
+                    <div class="reasoning-title">⚠️ Relative Indications</div>
+                    ${initiation.relativeIndications.map(i => `<div class="criteria-item"><div class="criteria-status criteria-warning">⚡</div><div><strong>${i.criterion}</strong> → ${i.action}</div></div>`).join('')}
+                </div>`;
+            }
+            
+            if (initiation.canWait.length > 0) {
+                html += `<div class="initiation-criteria" style="border-left-color: #22c55e; margin-top: 10px;">
+                    <div class="reasoning-title">✅ Conservative Management OK</div>
+                    ${initiation.canWait.map(i => `<div class="criteria-item"><div class="criteria-status criteria-met">✓</div><div>${i.criterion} <span style="color:var(--text-light)">(${i.detail})</span></div></div>`).join('')}
+                </div>`;
+            }
+            
+            html += `
+                <div class="reasoning-section">
+                    <div class="reasoning-title">📚 Evidence Reference</div>
+                    <div class="reasoning-content">
+                        <strong>STARRT-AKI (NEJM 2020):</strong> 44% avoided RRT with delayed strategy. No mortality difference.<br><br>
+                        <strong>AKIKI (JAMA 2016):</strong> 49% avoided RRT. Urgent: K⁺≥6, pH<7.15, pulm oedema, oliguria >72h.
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('tab-initiation').innerHTML = html;
+        }
+        
+        function renderGoalAnalysis(data) {
+            const selectedGoals = Object.entries(activeGoals).filter(([k, v]) => v).map(([k]) => k);
+            const goalNames = {
+                'volume': 'Volume Removal',
+                'acidosis': 'Acid-Base Correction',
+                'potassium': 'Potassium Control',
+                'solute': 'Solute Clearance',
+                'sodium': 'Sodium Management'
+            };
+            
+            let html = `<div class="goal-box">
+                <div class="recommendation-header">
+                    <div class="recommendation-icon" style="background: var(--success);">🎯</div>
+                    <div>
+                        <div class="recommendation-title">Treatment Goals: ${selectedGoals.length > 0 ? selectedGoals.map(g => goalNames[g] || g).join(', ') : 'Not Selected'}</div>
+                        <div class="recommendation-subtitle">Goal-directed therapy guides prescription parameters</div>
+                    </div>
+                </div>
+            </div>`;
+            
+            if (selectedGoals.length === 0) {
+                html += `<div class="reasoning-section"><div class="reasoning-content">Please select treatment goals in Step 1 (Tier 2) to see goal-specific analysis and critical questions.</div></div>`;
+            } else {
+                const goalContent = {
+                    'volume': {
+                        questions: [
+                            'Is this cardiorenal or fluid-responsive AKI?',
+                            'Has diuretic therapy been optimised? (Furosemide infusion, thiazide addition)',
+                            'What is the target fluid removal rate and end-point?',
+                            'Is VExUS elevated suggesting venous congestion?'
+                        ],
+                        insight: 'CRRT for volume: Goal is decongestion. UF rate typically 1-2 ml/kg/hr. Consider SCUF if no clearance needs.',
+                        prescription: 'Consider SCUF if only volume removal needed. For CVVHDF, prioritise UF rate calculation.'
+                    },
+                    'acidosis': {
+                        questions: [
+                            'What is the PRIMARY cause of acidosis? (Use GOLDMARK mnemonic)',
+                            'Is this lactic acidosis from hypoperfusion? (Fix perfusion, not just pH)',
+                            'Is this ketoacidosis? (Insulin is the treatment, not dialysis)',
+                            'Is sodium bicarbonate temporising appropriate while addressing cause?'
+                        ],
+                        insight: 'RRT temporises acidosis but does NOT treat the cause. BICAR-ICU showed bicarbonate benefit only in AKI + pH<7.2 subgroup.',
+                        prescription: 'CVVHDF with standard bicarbonate solutions. See Acidosis tab for systematic analysis.'
+                    },
+                    'potassium': {
+                        questions: [
+                            'Have medical therapies been trialled? (Calcium, insulin/dextrose, salbutamol, resonium)',
+                            'Is there ongoing K⁺ release? (Rhabdomyolysis, tumour lysis, haemolysis)',
+                            'What dialysate K⁺ concentration is appropriate?'
+                        ],
+                        insight: 'K⁺ is a small molecule - cleared best by DIFFUSION (dialysis). Use CVVHD or CVVHDF. Dialysate K⁺ usually 2-4 mmol/L.',
+                        prescription: 'CVVHD or CVVHDF. Dialysate K⁺ 2-4 mmol/L depending on severity. Monitor Q4-6h.'
+                    },
+                    'solute': {
+                        questions: [
+                            'Are there actual uraemic symptoms? (Encephalopathy, pericarditis, bleeding)',
+                            'Or just elevated urea without symptoms?',
+                            'Is there a dialysable toxin? (Check EXTRIP guidelines)'
+                        ],
+                        insight: 'Urea itself is relatively non-toxic. Treat symptoms, not numbers. CVVHDF provides comprehensive clearance.',
+                        prescription: 'CVVHDF for comprehensive small/medium molecule clearance.'
+                    },
+                    'sodium': {
+                        questions: [
+                            'Is this hyponatraemia or hypernatraemia?',
+                            'What is the rate of change needed? (Max 8-10 mmol/L/day)',
+                            'Is there neurological compromise requiring faster correction?'
+                        ],
+                        insight: 'CRRT allows very controlled sodium correction. Can customise dialysate sodium. Risk of osmotic demyelination with rapid correction.',
+                        prescription: 'CVVHD for controlled correction. Custom dialysate Na if needed.'
+                    }
+                };
+                
+                // Render each selected goal
+                selectedGoals.forEach((goal, idx) => {
+                    const content = goalContent[goal];
+                    if (!content) return;
+                    
+                    html += `
+                        <div style="margin-top: ${idx > 0 ? '16px' : '0'}; padding-top: ${idx > 0 ? '16px' : '0'}; border-top: ${idx > 0 ? '2px solid var(--border)' : 'none'};">
+                            <div style="font-weight: 700; font-size: 13px; color: var(--primary); margin-bottom: 10px;">
+                                ${goalNames[goal] || goal}
+                            </div>
+                            
+                            <div class="reasoning-section" style="border-left-color: var(--warning);">
+                                <div class="reasoning-title">❓ Critical Questions</div>
+                                <div class="reasoning-content">
+                                    <ul style="margin: 0; padding-left: 20px;">
+                                        ${content.questions.map(q => `<li style="margin-bottom: 4px;">${q}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="key-insight" style="margin-top: 10px;">
+                                <div class="key-insight-title">💡 Key Insight</div>
+                                <div class="key-insight-content">${content.insight}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                // Sepsis context special handling
+                if (activeContexts['sepsis']) {
+                    html += `
+                        <div style="margin-top: 16px; padding-top: 16px; border-top: 2px solid var(--border);">
+                            <div style="font-weight: 700; font-size: 13px; color: #7c3aed; margin-bottom: 10px;">
+                                🦠 Sepsis Context
+                            </div>
+                            <div class="reasoning-section" style="border-left-color: #7c3aed;">
+                                <div class="reasoning-title">❓ Critical Questions</div>
+                                <div class="reasoning-content">
+                                    <ul style="margin: 0; padding-left: 20px;">
+                                        <li>Is cytokine removal a realistic goal? (Evidence is weak)</li>
+                                        <li>Is this just AKI in the setting of sepsis?</li>
+                                        <li>Would an adsorptive membrane (Oxiris) be appropriate?</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="key-insight" style="margin-top: 10px;">
+                                <div class="key-insight-title">💡 Key Insight</div>
+                                <div class="key-insight-content">High-dose CRRT does NOT improve outcomes in sepsis (IVOIRE trial). Cytokine removal is mainly by ADSORPTION, not convection. Consider adsorptive membranes (Oxiris) if cytokine removal desired.</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            document.getElementById('tab-goal-analysis').innerHTML = html;
+        }
+        
+        function renderModality(modality) {
+            // All CRRT modalities: CVVH, CVVHD, and CVVHDF
+            const mods = {
+                cvvh: { name: 'CVVH', fullName: 'Continuous Venovenous Haemofiltration', coffee: 'French Press', icon: '🫖', mechanism: 'CONVECTION only', desc: 'Pressure-driven solute drag across membrane (like pushing through a filter).', best: 'Medium molecules, volume removal. Less efficient for small molecules like K⁺.' },
+                cvvhd: { name: 'CVVHD', fullName: 'Continuous Venovenous Haemodialysis', coffee: 'Pour Over / Drip', icon: '☕', mechanism: 'DIFFUSION only', desc: 'Concentration gradient pulls solutes across membrane.', best: 'Small molecules (K⁺, urea, creatinine). Most efficient for hyperkalaemia.' },
+                cvvhdf: { name: 'CVVHDF', fullName: 'Continuous Venovenous Haemodiafiltration', coffee: 'Espresso Machine', icon: '☕', mechanism: 'DIFFUSION + CONVECTION', desc: 'Combines both mechanisms - pressure AND concentration gradient.', best: 'Comprehensive clearance. Default choice when multiple goals.' },
+                scuf: { name: 'SCUF', fullName: 'Slow Continuous Ultrafiltration', coffee: 'Cold Brew Filter', icon: '🧊', mechanism: 'ULTRAFILTRATION only', desc: 'Pure fluid removal. No dialysate.', best: 'Pure volume overload when clearance not needed.' }
+            };
+            
+            let html = `
+                <div class="coffee-explainer">
+                    <div class="coffee-title">☕ The Coffee Analogy: Understanding CRRT Modalities <span class="cct-badge">CCT Episode 20</span></div>
+                    <p style="font-size: 11px; color: var(--text-light); margin-bottom: 12px;">
+                        Each modality works like a different coffee brewing method. Match the modality to your clinical goal.
+                    </p>
+                    <div class="coffee-grid" style="grid-template-columns: repeat(3, 1fr);">
+            `;
+            
+            ['cvvh', 'cvvhd', 'cvvhdf'].forEach(key => {
+                const m = mods[key];
+                html += `
+                    <div class="coffee-card ${modality.selected === key ? 'selected' : ''}">
+                        <div class="coffee-icon">${m.icon}</div>
+                        <div class="coffee-name">${m.coffee}</div>
+                        <div class="coffee-mode">= ${m.name}</div>
+                        <div style="font-size: 9px; color: var(--text-light); margin-bottom: 4px;">(${m.fullName})</div>
+                        <div class="coffee-mechanism"><strong>${m.mechanism}</strong><br>${m.desc}</div>
+                        <div class="coffee-best-for">✓ ${m.best}</div>
+                    </div>
+                `;
+            });
+            
+            html += `</div></div>`;
+            
+            html += `
+                <div class="recommendation-box" style="margin-top: 16px;">
+                    <div class="recommendation-header">
+                        <div class="recommendation-icon">☕</div>
+                        <div>
+                            <div class="recommendation-title">Recommended: ${mods[modality.selected]?.name || 'CVVHDF'}</div>
+                            <div class="recommendation-subtitle">${modality.rationale}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="key-insight">
+                    <div class="key-insight-title">📚 Key Evidence</div>
+                    <div class="key-insight-content">
+                        • <strong>Diffusion</strong> = dialysis = clears small molecules (<500 Daltons): K⁺, urea, creatinine<br>
+                        • <strong>Convection</strong> = hemofiltration = clears small AND medium molecules (<50 kDa)<br>
+                        • <strong>Dose:</strong> 20-25 ml/kg/hr delivered. Higher doses show NO benefit (RENAL/ATN)<br>
+                        • <strong>IVOIRE:</strong> High-volume (70 ml/kg/hr) showed NO mortality benefit in sepsis
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('tab-modality').innerHTML = html;
+        }
+        
+        // RESTORED Anticoagulation Tab from v8.2
+        function renderAnticoag(anticoag) {
+            let html = `
+                <div class="recommendation-box">
+                    <div class="recommendation-header">
+                        <div class="recommendation-icon">💉</div>
+                        <div>
+                            <div class="recommendation-title">${anticoag.name}</div>
+                            <div class="recommendation-subtitle">${anticoag.rec === 'citrate' ? 'First-line choice per KDIGO guidelines' : anticoag.rationale[0] || ''}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (anticoag.citrateContra.length > 0) {
+                html += `<div class="reasoning-section" style="border-left-color: #ef4444;">
+                    <div class="reasoning-title">❌ Citrate Contraindications</div>
+                    <div class="reasoning-content">${anticoag.citrateContra.join('<br>')}</div>
+                </div>`;
+            }
+            
+            if (anticoag.heparinContra.length > 0) {
+                html += `<div class="reasoning-section" style="border-left-color: #f59e0b; margin-top: 12px;">
+                    <div class="reasoning-title">⚠️ Heparin Contraindications</div>
+                    <div class="reasoning-content">${anticoag.heparinContra.join('<br>')}</div>
+                </div>`;
+            }
+            
+            if (anticoag.circuitConsiderations.length > 0) {
+                html += `<div class="reasoning-section" style="border-left-color: var(--secondary); margin-top: 12px;">
+                    <div class="reasoning-title">🔌 Circuit Considerations</div>
+                    <div class="reasoning-content">${anticoag.circuitConsiderations.join('<br>')}</div>
+                </div>`;
+            }
+            
+            html += `
+                <div class="reasoning-section" style="margin-top: 12px;">
+                    <div class="reasoning-title">🔬 Why ${anticoag.rec === 'citrate' ? 'Citrate' : anticoag.name}?</div>
+                    <div class="reasoning-content">
+                        ${anticoag.rationale.map(r => `• ${r}`).join('<br>')}
+                    </div>
+                </div>
+            `;
+            
+            if (anticoag.evidence.length > 0) {
+                html += `
+                    <div class="reasoning-section" style="margin-top: 12px;">
+                        <div class="reasoning-title">📚 Supporting Evidence</div>
+                        ${anticoag.evidence.map(e => `
+                            <div class="evidence-item">
+                                <div class="study">${e.study}</div>
+                                <div class="finding">${e.finding}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            document.getElementById('tab-anticoag').innerHTML = html;
+        }
+        
+        function renderPrescription(rx, data) {
+            let html = '';
+            
+            if (!data.weight) {
+                html = `<div class="data-warning">⚠️ Weight required for prescription calculation. Please enter patient weight.</div>`;
+            }
+            
+            html += `
+                <div class="recommendation-box">
+                    <div class="recommendation-header">
+                        <div class="recommendation-icon">💊</div>
+                        <div>
+                            <div class="recommendation-title">${rx.mode} Prescription</div>
+                            <div class="recommendation-subtitle">Weight: ${data.weight || '—'}kg | Target delivered dose: 20-25 ml/kg/hr</div>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <div class="setting-label">Mode</div>
+                            <div class="setting-value">${rx.mode}</div>
+                            <div class="setting-why">Based on goal</div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">Blood Flow</div>
+                            <div class="setting-value">${rx.bloodFlow} <span class="setting-unit">ml/min</span></div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">Dialysate</div>
+                            <div class="setting-value">${rx.dialysate} <span class="setting-unit">ml/hr</span></div>
+                            <div class="setting-why">Diffusion</div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">Replacement</div>
+                            <div class="setting-value">${rx.replacement} <span class="setting-unit">ml/hr</span></div>
+                            <div class="setting-why">Convection</div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">UF Rate</div>
+                            <div class="setting-value">${rx.ufRate} <span class="setting-unit">ml/hr</span></div>
+                            <div class="setting-why">${rx.ufRec.category}</div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">Prescribed Dose</div>
+                            <div class="setting-value">${rx.prescribedDose} <span class="setting-unit">ml/kg/hr</span></div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">Expected Delivered</div>
+                            <div class="setting-value">~${Math.round(rx.prescribedDose * 0.85)} <span class="setting-unit">ml/kg/hr</span></div>
+                            <div class="setting-why">~15% downtime</div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">Filter</div>
+                            <div class="setting-value" style="font-size: 11px;">${rx.filter}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Citrate settings if applicable
+            if (rx.anticoagRec === 'citrate') {
+                html += `
+                    <div class="reasoning-section" style="border-left-color: #f59e0b;">
+                        <div class="reasoning-title">🍋 Citrate Protocol (Regiocit)</div>
+                        <div class="reasoning-content">
+                            <strong>Starting rates:</strong><br>
+                            • Regiocit: ${rx.citrateFlow} ml/hr (adjust per post-filter iCa)<br>
+                            • Calcium infusion (10%): ${rx.caInfusion} ml/hr (adjust per systemic iCa)<br><br>
+                            <strong>Targets:</strong><br>
+                            • Post-filter iCa: 0.25-0.35 mmol/L<br>
+                            • Systemic iCa: 1.0-1.2 mmol/L<br>
+                            • Total Ca:iCa ratio: <2.5 (watch for accumulation)
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Sepsis dosing evidence - RESTORED from v8.2
+            if (rx.severeSepsis) {
+                html += `
+                    <div class="sepsis-dose-info">
+                        <div class="dose-title">🦠 Sepsis & High-Dose CRRT Evidence</div>
+                        <div class="reasoning-content">
+                            <strong>Current evidence does NOT support high-volume hemofiltration:</strong><br><br>
+                            
+                            <strong>IVOIRE Trial (2013, n=137):</strong> HVHF 70 ml/kg/hr vs standard 35 ml/kg/hr showed NO mortality benefit, NO improvement in hemodynamics at 28 days.<br><br>
+                            
+                            <strong>Cochrane Review (2017):</strong> No beneficial effect of HVHF during sepsis.<br><br>
+                            
+                            <strong>Key insight:</strong> Cytokine removal is primarily by ADSORPTION (membrane binding) not convection. Higher flow doesn't improve cytokine clearance. Consider adsorptive membranes (Oxiris, PMMA) rather than dose escalation.
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // UF Recommendation Box - RESTORED detailed version from v8.2
+            const ufRec = rx.ufRec;
+            html += `
+                <div class="uf-recommendation ${ufRec.category}">
+                    <div class="reasoning-title">💧 UF Rate: ${ufRec.category.toUpperCase()} <span class="restored-badge">RESTORED</span></div>
+                    <div class="reasoning-content">
+                        <strong>Recommended: ${ufRec.recommended} ml/hr</strong> (Max safe: ${ufRec.maxSafe} ml/hr)<br><br>
+                        
+                        <strong>Clinical Rationale:</strong><br>
+                        ${ufRec.rationale.map(r => `• ${r}`).join('<br>')}<br><br>
+                        
+                        <strong>Physiological Basis:</strong><br>
+                        ${ufRec.physiologicalBasis.map(p => `• ${p}`).join('<br>')}
+                    </div>
+                </div>
+            `;
+            
+            // Evidence for UF
+            if (ufRec.evidence.length > 0) {
+                html += `
+                    <div class="reasoning-section" style="margin-top: 12px;">
+                        <div class="reasoning-title">📚 UF Evidence</div>
+                        ${ufRec.evidence.map(e => `
+                            <div class="evidence-item">
+                                <div class="study">${e.study}</div>
+                                <div class="finding">${e.finding}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            document.getElementById('tab-prescription').innerHTML = html;
+        }
+        
+        // ENHANCED Monitoring from v8.2
+        function renderMonitoring(rx, data) {
+            const isCitrate = rx.anticoagRec === 'citrate';
+            const isHeparin = rx.anticoagRec === 'heparin';
+            
+            let html = `
+                <div class="recommendation-box">
+                    <div class="recommendation-header">
+                        <div class="recommendation-icon">📊</div>
+                        <div>
+                            <div class="recommendation-title">Monitoring Protocol</div>
+                            <div class="recommendation-subtitle">${isCitrate ? 'Regional Citrate - Intensive Ca monitoring' : isHeparin ? 'Heparin - APTT monitoring' : 'No anticoag - Circuit monitoring'}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <p style="font-size: 11px; color: var(--text-light); margin-bottom: 12px;">Organised by blood tube colour for easy reference.</p>
+                
+                <div class="monitoring-timeline">
+            `;
+            
+            if (isCitrate) {
+                html += `
+                    <div class="timeline-column">
+                        <div class="timeline-header yellow">🟡 Citrate Monitoring</div>
+                        <div class="timeline-body">
+                            <div class="timeline-item">
+                                <div class="param">Ionised Ca (systemic)</div>
+                                <div class="freq">Q4h initially, Q6h stable</div>
+                                <div class="target">Target: 1.0-1.2 mmol/L</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="param">Ionised Ca (post-filter)</div>
+                                <div class="freq">Q4h initially</div>
+                                <div class="target">Target: 0.25-0.35 mmol/L</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="param">Total Ca:iCa Ratio</div>
+                                <div class="freq">Q12h</div>
+                                <div class="target">Alert if >2.5</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (isHeparin) {
+                html += `
+                    <div class="timeline-column">
+                        <div class="timeline-header purple">🟣 Coagulation</div>
+                        <div class="timeline-body">
+                            <div class="timeline-item">
+                                <div class="param">APTT</div>
+                                <div class="freq">Q6h (Q12h if stable)</div>
+                                <div class="target">Target: 45-60s</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="param">Platelets</div>
+                                <div class="freq">Daily</div>
+                                <div class="target">Watch for HIT</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    <div class="timeline-column">
+                        <div class="timeline-header green">🟢 Electrolytes</div>
+                        <div class="timeline-body">
+                            <div class="timeline-item">
+                                <div class="param">Potassium</div>
+                                <div class="freq">Q4-6h or per bag change</div>
+                                <div class="target">3.5-5.0 mmol/L</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="param">Phosphate</div>
+                                <div class="freq">Q12h</div>
+                                <div class="target">Replace if <0.8</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="param">Magnesium</div>
+                                <div class="freq">Daily</div>
+                                <div class="target">0.7-1.0 mmol/L</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-column">
+                        <div class="timeline-header blue">🔵 Blood Gas</div>
+                        <div class="timeline-body">
+                            <div class="timeline-item">
+                                <div class="param">pH / HCO₃</div>
+                                <div class="freq">Q6h</div>
+                                <div class="target">pH 7.35-7.45</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="param">Lactate</div>
+                                <div class="freq">Q6h</div>
+                                <div class="target">Trending down?</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-column">
+                        <div class="timeline-header gray">⚫ Clinical</div>
+                        <div class="timeline-body">
+                            <div class="timeline-item">
+                                <div class="param">Circuit/Filter</div>
+                                <div class="freq">Q2h visual</div>
+                                <div class="target">No clots</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="param">Urine Output</div>
+                                <div class="freq">Hourly</div>
+                                <div class="target">Recovery sign?</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="param">Fluid Balance</div>
+                                <div class="freq">Q6h</div>
+                                <div class="target">On target?</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Citrate accumulation protocol - RESTORED from v8.2
+            if (isCitrate) {
+                html += `
+                    <div class="reasoning-section" style="margin-top: 14px; border-left-color: var(--warning);">
+                        <div class="reasoning-title">⚠️ Citrate Accumulation Protocol (Ratio >2.5)</div>
+                        <div class="reasoning-content">
+                            <ol style="margin: 0; padding-left: 20px;">
+                                <li>Reduce Regiocit by 20-30%</li>
+                                <li>Increase Biphozyl by 500 ml/hr</li>
+                                <li>Continue Ca compensation and electrolyte monitoring</li>
+                                <li>Recheck ratio in 12h</li>
+                                <li>If persists >2.5 → Switch to No Anticoag (Prismasol)</li>
+                            </ol>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Note about filter life when no anticoag
+            if (rx.anticoagRec === 'none') {
+                html += `
+                    <div class="reasoning-section" style="margin-top: 14px;">
+                        <div class="reasoning-title">📋 Note: No Anticoagulation</div>
+                        <div class="reasoning-content">
+                            Without anticoagulation, expect shorter filter life (12-24h average). Monitor circuit pressures closely for early signs of clotting.
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Goal achievement check
+            const selectedGoalsList = Object.entries(activeGoals).filter(([k, v]) => v).map(([k]) => k);
+            const goalDisplayNames = {
+                'volume': 'Volume Removal',
+                'acidosis': 'Acid-Base Correction',
+                'potassium': 'Potassium Control',
+                'solute': 'Solute Clearance',
+                'sodium': 'Sodium Management'
+            };
+            const goalsDisplay = selectedGoalsList.length > 0 
+                ? selectedGoalsList.map(g => goalDisplayNames[g] || g).join(', ')
+                : 'Not selected';
+            
+            html += `
+                <div class="key-insight" style="margin-top: 14px;">
+                    <div class="key-insight-title">🎯 Are Your Goals Being Achieved?</div>
+                    <div class="key-insight-content">
+                        Treatment Goals: <strong>${goalsDisplay}</strong><br><br>
+                        If not achieving goals: Reassess indication, check delivered dose (vs prescribed), evaluate filter function, consider if underlying cause is being addressed.
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('tab-monitoring').innerHTML = html;
+        }
+        
+        function renderAcidosis(data) {
+            const { ag, deltaRatio } = calculateAnionGap();
+            
+            let html = `
+                <div class="recommendation-box" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #f59e0b;">
+                    <div class="recommendation-header">
+                        <div class="recommendation-icon" style="background: #f59e0b;">🧪</div>
+                        <div>
+                            <div class="recommendation-title">Metabolic Acidosis Framework</div>
+                            <div class="recommendation-subtitle">Systematic approach from Critical Care Time (CCT) podcast & NephMadness (ASN - American Society of Nephrology educational resource)</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Step 1: pH
+            html += `<div class="acidosis-step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">Look at the pH First!</div>
+                    <div class="step-desc">
+                        Current pH: <span class="step-value">${data.ph || '—'}</span>
+                        ${data.ph ? (data.ph < 7.35 ? ' → Acidaemia present' : data.ph > 7.45 ? ' → Alkalaemia present' : ' → Normal range') : ''}
+                    </div>
+                </div>
+            </div>`;
+            
+            // Step 2: Anion Gap
+            html += `<div class="acidosis-step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">Calculate Anion Gap</div>
+                    <div class="step-desc">
+                        AG = Na⁺ - Cl⁻ - HCO₃⁻ = <span class="step-value">${ag ? ag.toFixed(0) : '—'}</span>
+                        ${ag ? (ag > 12 ? ' → Elevated (AGMA)' : ' → Normal (if acidosis, likely NAGMA)') : ' (Enter Na⁺, Cl⁻, HCO₃⁻)'}
+                    </div>
+                </div>
+            </div>`;
+            
+            // Step 3: Compensation
+            let wintersPCO2 = null;
+            let compensationStatus = '';
+            if (data.hco3) {
+                const wintersPCO2Low = 1.5 * data.hco3 + 8 - 2;
+                const wintersPCO2High = 1.5 * data.hco3 + 8 + 2;
+                wintersPCO2 = `${wintersPCO2Low.toFixed(0)}-${wintersPCO2High.toFixed(0)}`;
+                
+                if (data.pco2) {
+                    if (data.pco2 > wintersPCO2High) compensationStatus = 'Additional Respiratory Acidosis';
+                    else if (data.pco2 < wintersPCO2Low) compensationStatus = 'Additional Respiratory Alkalosis';
+                    else compensationStatus = 'Appropriate compensation';
+                }
+            }
+            
+            html += `<div class="acidosis-step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">Check Compensation (Winter's Formula)</div>
+                    <div class="step-desc">
+                        Expected pCO₂: ${wintersPCO2 || '—'} mmHg | Actual: <span class="step-value">${data.pco2 || '—'}</span><br>
+                        ${compensationStatus ? `→ <span class="step-value">${compensationStatus}</span>` : ''}
+                    </div>
+                </div>
+            </div>`;
+            
+            // Step 4: Delta-Delta
+            let deltaInterp = '';
+            if (deltaRatio) {
+                if (deltaRatio > 2) deltaInterp = 'AGMA + Metabolic Alkalosis';
+                else if (deltaRatio < 1) deltaInterp = 'AGMA + Non-AG Metabolic Acidosis';
+                else deltaInterp = 'Pure AGMA';
+            }
+            
+            html += `<div class="acidosis-step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <div class="step-title">Delta-Delta (Don't Miss Additional Disorders)</div>
+                    <div class="step-desc">
+                        Delta Ratio: <span class="step-value">${deltaRatio ? deltaRatio.toFixed(2) : '—'}</span><br>
+                        ${deltaInterp ? `→ <span class="step-value">${deltaInterp}</span>` : ''}
+                    </div>
+                </div>
+            </div>`;
+            
+            // Step 5: CAUSE
+            html += `<div class="acidosis-step" style="background: #fef3c7;">
+                <div class="step-number" style="background: #f59e0b;">5</div>
+                <div class="step-content">
+                    <div class="step-title">⚠️ MOST IMPORTANT: What is the CAUSE?</div>
+                    <div class="step-desc">
+                        <strong>GOLDMARK for AGMA:</strong><br>
+                        Glycols | Oxoproline | L-Lactate | D-Lactate | Methanol | Aspirin | Renal failure | Ketoacidosis<br><br>
+                        Current lactate: <span class="step-value">${data.lactate || '—'}</span> mmol/L
+                        ${data.lactate && data.lactate > 4 ? ' → Significant lactic acidosis. WHY? Hypoperfusion? Type B?' : ''}
+                    </div>
+                </div>
+            </div>`;
+            
+            html += `
+                <div class="key-insight">
+                    <div class="key-insight-title">💡 Key Principles</div>
+                    <div class="key-insight-content">
+                        • <strong>Sodium bicarbonate</strong> = temporising. BICAR-ICU: benefit only in AKI + pH<7.2<br>
+                        • <strong>RRT for acidosis</strong> = temporising. Best for oliguric/anuric renal failure<br>
+                        • <strong>Persistently elevated lactate</strong> does NOT always mean "needs more fluid"<br>
+                        • <strong>Primary goal:</strong> Correct the CAUSE. RRT removes acid but if production continues, you're not solving the problem.
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('tab-acidosis').innerHTML = html;
+        }
+        
+        function renderTransition(transition, data) {
+            let html = `
+                <div class="transition-box">
+                    <div class="recommendation-header">
+                        <div class="recommendation-icon" style="background: var(--transition);">🎯</div>
+                        <div>
+                            <div class="recommendation-title">${transition.recommendation}</div>
+                            <div class="recommendation-subtitle">Daily assessment recommended</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="initiation-criteria" style="border-left-color: var(--transition);">
+                    <div class="reasoning-title">Transition Criteria (CRRT → IHD)</div>
+                    ${transition.transitionCriteria.map(c => `<div class="criteria-item"><div class="criteria-status ${c.met ? 'criteria-met' : 'criteria-warning'}">${c.met ? '✓' : '✗'}</div><div>${c.criterion}</div></div>`).join('')}
+                </div>
+                
+                <div class="initiation-criteria" style="border-left-color: var(--success); margin-top: 10px;">
+                    <div class="reasoning-title">Liberation Criteria (Stop RRT)</div>
+                    ${transition.liberationCriteria.map(c => `<div class="criteria-item"><div class="criteria-status ${c.met ? 'criteria-met' : 'criteria-warning'}">${c.met ? '✓' : '✗'}</div><div>${c.criterion}${c.detail ? ` <span style="color:var(--text-light)">(${c.detail})</span>` : ''}</div></div>`).join('')}
+                </div>
+                
+                <div class="reasoning-section">
+                    <div class="reasoning-title">📚 Reference</div>
+                    <div class="reasoning-content">DOnE RRT Meta-analysis: Urine output ≥500ml/24h or >0.5ml/kg/hr best predicts successful discontinuation (PPV 85-90%).</div>
+                </div>
+            `;
+            
+            document.getElementById('tab-transition').innerHTML = html;
+        }
+        
+        function renderEvidence() {
+            const html = `
+                <div class="card" style="margin-bottom: 0;">
+                    <div class="card-header"><h2>📚 Key Evidence Base</h2></div>
+                    
+                    <div class="reasoning-section" style="border-left-color: var(--initiation);">
+                        <div class="reasoning-title">⏱️ RRT Timing</div>
+                        <div class="reasoning-content">
+                            <strong>STARRT-AKI (NEJM 2020, n=2,927):</strong> Early vs delayed - no mortality difference. 44% avoided RRT with delayed strategy.<br><br>
+                            <strong>AKIKI (JAMA 2016, n=620):</strong> Delayed safe. 49% avoided RRT. Urgent: K⁺≥6, pH<7.15, pulm oedema, oliguria >72h.<br><br>
+                            <strong>IDEAL-ICU (NEJM 2018):</strong> No benefit from early RRT in septic shock.
+                        </div>
+                    </div>
+                    
+                    <div class="reasoning-section" style="border-left-color: var(--success);">
+                        <div class="reasoning-title">💊 Dosing</div>
+                        <div class="reasoning-content">
+                            <strong>RENAL + ATN:</strong> 20-25 ml/kg/hr delivered. NO benefit from higher doses (35-40 ml/kg/hr).<br><br>
+                            <strong>IVOIRE (2013, n=137):</strong> High-volume (70 ml/kg/hr) showed NO mortality benefit in sepsis vs standard 35 ml/kg/hr.<br><br>
+                            <strong>Key insight:</strong> Patients typically receive only 60% of prescribed dose due to interruptions.
+                        </div>
+                    </div>
+                    
+                    <div class="reasoning-section" style="border-left-color: #8b5cf6;">
+                        <div class="reasoning-title">🦠 Sepsis & Cytokine Removal</div>
+                        <div class="reasoning-content">
+                            <strong>Key insight:</strong> Cytokine removal is mainly by ADSORPTION, not convection. Higher doses don't remove more cytokines.<br><br>
+                            <strong>Cochrane 2017:</strong> No beneficial effect of HVHF in sepsis.<br><br>
+                            <strong>Consider:</strong> Adsorptive membranes (Oxiris, AN69-ST, PMMA) rather than dose escalation.
+                        </div>
+                    </div>
+                    
+                    <div class="reasoning-section" style="border-left-color: var(--primary);">
+                        <div class="reasoning-title">💉 Anticoagulation</div>
+                        <div class="reasoning-content">
+                            <strong>Cochrane 2020 (14 RCTs, 1,879 patients):</strong> Citrate: 60% less bleeding, 40% longer filter life vs heparin.<br><br>
+                            <strong>KDIGO 2012:</strong> Regional citrate recommended over heparin in patients without contraindications.
+                        </div>
+                    </div>
+                    
+                    <div class="reasoning-section" style="border-left-color: var(--warning);">
+                        <div class="reasoning-title">🫀 Hemodynamics & RRT (Dr. Prager)</div>
+                        <div class="reasoning-content">
+                            <strong>~50% of CRRT hypotension</strong> is NOT preload-dependent. Don't assume patient just needs more fluid.<br><br>
+                            <strong>VExUS:</strong> Best validated in cardiac surgery (OR 3.86 for AKI). Limited correlation in sepsis.<br><br>
+                            <strong>RRI >0.75:</strong> Suggests ATN vs prerenal (90% specificity).
+                        </div>
+                    </div>
+                    
+                    <div class="reasoning-section" style="border-left-color: #06b6d4;">
+                        <div class="reasoning-title">💧 Fluid Management</div>
+                        <div class="reasoning-content">
+                            <strong>FACTT (NEJM 2006):</strong> Conservative fluid strategy improved ventilator-free days in ARDS.<br><br>
+                            <strong>Bouchard 2009:</strong> Fluid overload >10% associated with increased mortality in AKI.
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('tab-evidence').innerHTML = html;
+        }
+        
+        // ==========================================
+        // MAIN UPDATE FUNCTION
+        // ==========================================
+        function updateAll() {
+            // Run calculators
+            calculateBP();
+            calculateAnionGap();
+            calculateUrineRate();
+            calculateVExUS();
+            calculateRRI();
+            updateHemoAssessment();
+            updateCircuitAlerts();
+            
+            // Collect data
+            const data = collectData();
+            
+            // Generate assessments
+            const initiation = assessInitiation(data);
+            const modality = selectModality(data);
+            const anticoag = selectAnticoagulation(data);
+            const ufRec = recommendUFRate(data);
+            const filter = selectFilter(data);
+            const rx = generatePrescription(data, modality, anticoag, ufRec, filter);
+            const transition = assessTransition(data);
+            
+            // Render all tabs
+            renderInitiation(initiation, data);
+            renderGoalAnalysis(data);
+            renderModality(modality);
+            renderAnticoag(anticoag);
+            renderPrescription(rx, data);
+            renderMonitoring(rx, data);
+            renderAcidosis(data);
+            renderTransition(transition, data);
+            renderEvidence();
+        }
+        
+        // ==========================================
+        // INITIALIZE
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('input, select').forEach(el => {
+                el.addEventListener('input', updateAll);
+                el.addEventListener('change', updateAll);
+            });
+            
+            updateAll();
+        });
+    </script>
+</body>
+</html>
