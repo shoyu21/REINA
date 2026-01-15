@@ -54,7 +54,7 @@ REINA is an evidence-synthesized clinical decision support tool designed to assi
 ## 🚀 Quick Start
 
 ### Access Online
-Simply visit: **[https://YOUR-USERNAME.github.io/REINA/](https://YOUR-USERNAME.github.io/REINA/)**
+Simply visit: **[https://shoyu21.github.io/REINA/](https://shoyu21.github.io/REINA/)**
 
 ### Add to Mobile Home Screen
 
@@ -143,7 +143,7 @@ REINA is proprietary software. See [LICENSE](LICENSE) for terms.
 - Evidence synthesis informed by Critical Care Time podcast
 - Hemodynamic assessment methodology inspired by Dr. Ross Prager (shockcalcs.com)
 - Clinical feedback from ICU colleagues
-- Built upon the foundation of [ARISE](https://github.com/YOUR-USERNAME/ARISE) ICU Liberation tool
+- Built upon the foundation of [ARISE](https://github.com/shoyu21/ARISE) ICU Liberation tool
 
 ---
 
