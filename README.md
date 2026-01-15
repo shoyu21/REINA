@@ -1,4 +1,4 @@
-# REINA - RRT Evidence-Based Integrated Nursing & Attending Support
+# REINA - RRT Evidence-Based Integrated Support
 
 **Goal-Directed Renal Replacement Therapy Decision Support for Critical Care**
 
