@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REINA &middot; Learn mode prototype</title>
+<style>
+  :root {
+    --ink: #1b2430; --ink-2: #4b5563; --mute: #8a94a3;
+    --paper: #f3f4f2; --card: #ffffff; --line: #d9dde3;
+    --blood: #8b2635; --dial: #0f766e; --conv: #b45309; --ok: #15803d; --warn: #b91c1c;
+    --dial-bg: #e6f4f2; --conv-bg: #fbf0e2; --blood-bg: #f7e9eb;
+    --r: 10px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 14px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; font-weight: 500; letter-spacing: -0.01em; margin: 0; }
+  h1 { font-size: 26px; } h2 { font-size: 19px; } h3 { font-size: 15px; }
+  .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--mute); font-weight: 600; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 18px 16px 60px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  header .tag { font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; color: var(--ink-2); background: #fff; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+
+  /* ---------- Layer A: primer ---------- */
+  .primer { display: grid; grid-template-columns: 360px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 820px) { .primer { grid-template-columns: 1fr; } }
+  .primer p { margin: 6px 0 0; color: var(--ink-2); }
+  .rules { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+  .rules li { display: grid; grid-template-columns: 78px 1fr; gap: 10px; align-items: baseline; padding: 7px 10px; border-radius: 8px; background: var(--paper); }
+  .rules b { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .rules li.d b { color: var(--dial); } .rules li.c b { color: var(--conv); } .rules li.b b { color: var(--ink); }
+  .primer-toggle { border: 0; background: none; color: var(--ink-2); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
+  details.primer-wrap > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: baseline; }
+  details.primer-wrap > summary::-webkit-details-marker { display: none; }
+  details.primer-wrap > summary .hint { font-size: 12px; color: var(--mute); }
+  details.primer-wrap[open] > summary .hint { display: none; }
+
+  /* filter diagram */
+  .fd { width: 100%; height: auto; display: block; }
+  .fd .membrane { stroke: var(--ink); stroke-width: 1.4; stroke-dasharray: 3 3; }
+  .fd .blood { stroke: var(--blood); stroke-width: 7; fill: none; stroke-linecap: round; }
+  .fd .dial { stroke: var(--dial); stroke-width: 5; fill: none; stroke-linecap: round; transition: opacity .25s; }
+  .fd .conv { stroke: var(--conv); stroke-width: 5; fill: none; stroke-linecap: round; transition: opacity .25s; }
+  .fd .lbl { font: 600 11px -apple-system, "Segoe UI", sans-serif; }
+  .fd .lbl.d { fill: var(--dial); } .fd .lbl.c { fill: var(--conv); } .fd .lbl.b { fill: var(--blood); } .fd .lbl.k { fill: var(--ink-2); font-weight: 500; }
+  .fd .flow { stroke-dasharray: 10 8; animation: flow 1.2s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -18; } }
+  @media (prefers-reduced-motion: reduce) { .fd .flow { animation: none; } }
+  .fd.off-dial .dial { opacity: .12; } .fd.off-conv .conv { opacity: .12; }
+  .fd-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; color: var(--ink-2); }
+  .fd-legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .fd-legend .b::before { background: var(--blood); } .fd-legend .d::before { background: var(--dial); } .fd-legend .c::before { background: var(--conv); }
+
+  /* ---------- inputs ---------- */
+  .field { margin-top: 12px; }
+  .field:first-child { margin-top: 0; }
+  .field .lab { font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .field .lab small { font-weight: 500; color: var(--mute); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 5px 11px; font-size: 13px; cursor: pointer; color: var(--ink); transition: background .12s, border-color .12s; }
+  .chip:hover { border-color: var(--ink-2); }
+  .chip:focus-visible { outline: 2px solid var(--dial); outline-offset: 2px; }
+  .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .chip.on.danger { background: var(--warn); border-color: var(--warn); }
+  .cases { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cases .chip { border-style: dashed; }
+  .cases .chip.on { border-style: solid; }
+
+  /* ---------- Layer B: predict / reveal ---------- */
+  .predict .q { margin-top: 10px; }
+  .predict .q .lab { font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+  .opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .opt { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 9px 6px; text-align: center; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .opt:focus-visible { outline: 2px solid var(--dial); outline-offset: 2px; }
+  .opt small { display: block; font-weight: 500; font-size: 11px; color: var(--mute); margin-top: 2px; }
+  .opt.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .opt.hit { border-color: var(--ok); background: #eefbf1; box-shadow: inset 0 0 0 1px var(--ok); }
+  .opt.miss { border-color: var(--warn); background: #fdf1f1; box-shadow: inset 0 0 0 1px var(--warn); }
+  .opt.truth { border-color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok); }
+  .btn { display: inline-block; border: 0; border-radius: 8px; padding: 10px 16px; font-weight: 600; font-size: 14px; cursor: pointer; background: var(--ink); color: #fff; }
+  .btn[disabled] { opacity: .4; cursor: not-allowed; }
+  .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+  .predict-foot { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .predict-foot .score { font-size: 12px; color: var(--mute); margin-left: auto; }
+  .reveal { margin-top: 12px; display: none; }
+  .reveal.show { display: block; }
+  .verdict { border-left: 4px solid var(--line); padding: 8px 12px; border-radius: 0 8px 8px 0; background: var(--paper); margin-top: 8px; }
+  .verdict.hit { border-color: var(--ok); } .verdict.miss { border-color: var(--warn); }
+  .verdict .h { font-weight: 600; }
+  .verdict .rule { margin-top: 4px; color: var(--ink-2); }
+  .verdict .flip { margin-top: 6px; font-size: 12px; padding: 6px 8px; background: #fff; border: 1px dashed var(--line); border-radius: 6px; }
+  .verdict .flip b { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .rev { margin-top: 6px; font-size: 12px; padding: 6px 9px; border-radius: 6px; background: #fdf6e3; border: 1px solid #e6d9a8; color: #6b5518; }
+  .rev b { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: #9a7d1f; margin-bottom: 2px; }
+
+  /* ---------- Layer C: change log ---------- */
+  .log { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; max-height: 340px; overflow: auto; }
+  .log li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; padding: 7px 9px; border-radius: 8px; background: var(--paper); font-size: 13px; animation: pop .3s ease-out; }
+  @keyframes pop { from { transform: translateY(-4px); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .log li { animation: none; } }
+  .log li .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; background: var(--mute); }
+  .log li.mod .dot { background: var(--dial); } .log li.ac .dot { background: var(--conv); } .log li.same .dot { background: var(--line); }
+  .log li .what { font-weight: 600; }
+  .log li .why { color: var(--ink-2); }
+  .log li .cf { color: var(--ink-2); font-size: 12px; margin-top: 2px; }
+  .log li .cf b { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .empty { color: var(--mute); font-size: 13px; padding: 10px 0; }
+  .foot { margin-top: 18px; font-size: 12px; color: var(--mute); }
+  .foot b { color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <div class="eyebrow">REINA &middot; prototype</div>
+    <h1>Learn mode</h1>
+  </div>
+  <div><span class="tag">Standalone POC &middot; not the live engine</span></div>
+</header>
+
+<!-- ================= LAYER A: primer ================= -->
+<details class="card primer-wrap" id="primer" open>
+  <summary>
+    <h2>How a CRRT circuit clears things</h2>
+    <span class="hint">tap to open &middot; 90 seconds</span>
+  </summary>
+  <div class="primer" style="margin-top:12px;">
+    <div>
+      <svg class="fd" id="fdPrimer" viewBox="0 0 340 215" xmlns="http://www.w3.org/2000/svg" aria-label="Filter diagram">
+        <text class="lbl k" x="245" y="34" text-anchor="end">filter</text>
+        <rect x="95" y="40" width="150" height="130" rx="10" fill="#fff" stroke="#1b2430" stroke-width="1.2"/>
+        <line class="membrane" x1="170" y1="46" x2="170" y2="164"/>
+        <path class="blood flow" d="M20 60 H130 V150 H20"/>
+        <text class="lbl b" x="22" y="76">blood in</text>
+        <text class="lbl b" x="22" y="144">blood back</text>
+        <path class="dial flow" d="M320 150 H210 V60 H320"/>
+        <text class="lbl d" x="318" y="166" text-anchor="end">dialysate in</text>
+        <text class="lbl d" x="318" y="76" text-anchor="end">effluent out</text>
+        <path class="conv flow" d="M60 20 V60"/>
+        <text class="lbl c" x="66" y="24">replacement fluid</text>
+        <text class="lbl c" x="122" y="188" text-anchor="middle">convection</text>
+        <text class="lbl c" x="122" y="200" text-anchor="middle" font-size="9" font-weight="500">pushed through</text>
+        <text class="lbl d" x="222" y="188" text-anchor="middle">diffusion</text>
+        <text class="lbl d" x="222" y="200" text-anchor="middle" font-size="9" font-weight="500">across membrane</text>
+      </svg>
+      <div class="fd-legend"><span class="b">blood</span><span class="d">dialysate &middot; diffusion</span><span class="c">replacement &middot; convection</span></div>
+    </div>
+    <div>
+      <p>Two ways to clear: <b style="color:var(--dial)">diffusion</b> runs dialysate past the membrane so small solutes (K<sup>+</sup>, Na<sup>+</sup>, urea, H<sup>+</sup>) follow their gradient across. <b style="color:var(--conv)">Convection</b> pushes replacement fluid through the blood so water drags solutes (including middle molecules) with it. The modality name just says which fluid lines are running.</p>
+      <ul class="rules">
+        <li class="d"><b>CVVHD</b><span>dialysate only &middot; pure diffusion &middot; best for a single small-solute problem (K<sup>+</sup>, Na<sup>+</sup>)</span></li>
+        <li class="c"><b>CVVH</b><span>replacement only &middot; pure convection &middot; volume and middle molecules, no dialysate for K<sup>+</sup></span></li>
+        <li class="b"><b>CVVHDF</b><span>both lines &middot; the default when you want everything</span></li>
+      </ul>
+      <p style="font-size:12px;">Evidence: when dose is matched, none of the three changes mortality or renal recovery (network meta-analyses 2021; Barbar 2025). Modality is chosen for the <em>problem</em>, not for superiority.</p>
+      <div class="fd-legend" style="margin-top:8px;">
+        <button class="chip" type="button" onclick="fdShow('CVVHD')">show CVVHD</button>
+        <button class="chip" type="button" onclick="fdShow('CVVH')">show CVVH</button>
+        <button class="chip" type="button" onclick="fdShow('CVVHDF')">show CVVHDF</button>
+      </div>
+    </div>
+  </div>
+</details>
+
+<div class="grid">
+  <!-- ================= inputs ================= -->
+  <div class="card" id="inputs">
+    <div class="eyebrow">Patient</div>
+    <h2 style="margin-top:2px;">Set the inputs</h2>
+    <div class="field">
+      <div class="lab"><span>Start with a case</span><small>or build your own below</small></div>
+      <div class="cases" id="cases"></div>
+    </div>
+    <div class="field">
+      <div class="lab"><span>Emergency</span><small>Step 0</small></div>
+      <div class="chips" data-set="emergencies">
+        <button class="chip danger" data-v="refractory-k">K<sup>+</sup> &ge;6.5 + ECG change</button>
+        <button class="chip danger" data-v="toxin">Dialysable toxin</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="lab"><span>Goals</span><small>what must CRRT achieve?</small></div>
+      <div class="chips" data-set="goals">
+        <button class="chip" data-v="volume">Volume removal</button>
+        <button class="chip" data-v="solute-clearance">Solute clearance</button>
+        <button class="chip" data-v="acidosis-correction">Acidosis correction</button>
+        <button class="chip" data-v="electrolyte">Electrolyte control</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="lab"><span>Special factors</span></div>
+      <div class="chips" data-set="special">
+        <button class="chip" data-v="rhabdo">Rhabdomyolysis</button>
+        <button class="chip" data-v="hypernatemia">Na &gt;155</button>
+        <button class="chip" data-v="hyponatemia">Na &lt;125</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="lab"><span>Haemodynamics</span></div>
+      <div class="chips" data-radio="haemo">
+        <button class="chip" data-v="stable">MAP maintained &middot; NorA &lt;0.1</button>
+        <button class="chip" data-v="vasopressors">On vasopressors</button>
+      </div>
+      <div class="chips" style="margin-top:6px;" data-radio="sepsis">
+        <button class="chip" data-v="1">Septic source</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="lab"><span>Bleeding risk</span><small>tool-classified in the live build</small></div>
+      <div class="chips" data-radio="bleeding">
+        <button class="chip" data-v="low">Not high</button>
+        <button class="chip" data-v="high">High</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="lab"><span>Liver</span></div>
+      <div class="chips" data-radio="liver">
+        <button class="chip" data-v="ok">No liver disease</button>
+        <button class="chip" data-v="failing">Liver failure</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= LAYER B + C ================= -->
+  <div>
+    <div class="card predict" id="predict">
+      <div class="eyebrow">Before you look</div>
+      <h2 style="margin-top:2px;">What would you prescribe?</h2>
+      <div class="q">
+        <div class="lab">Modality</div>
+        <div class="opts" id="guessMod">
+          <button class="opt" data-v="CVVHD">CVVHD<small>dialysate only</small></button>
+          <button class="opt" data-v="CVVH">CVVH<small>replacement only</small></button>
+          <button class="opt" data-v="CVVHDF">CVVHDF<small>both</small></button>
+        </div>
+      </div>
+      <div class="q">
+        <div class="lab">Anticoagulation</div>
+        <div class="opts" id="guessAc">
+          <button class="opt" data-v="citrate">Citrate<small>regional</small></button>
+          <button class="opt" data-v="heparin">Heparin<small>systemic</small></button>
+          <button class="opt" data-v="none">None<small>accept short circuit</small></button>
+        </div>
+      </div>
+      <div class="predict-foot">
+        <button class="btn" id="revealBtn" disabled>Reveal REINA&rsquo;s answer</button>
+        <button class="btn ghost" id="resetBtn" type="button">Clear</button>
+        <span class="score" id="score"></span>
+      </div>
+      <div class="reveal" id="reveal">
+        <svg class="fd" id="fdReveal" viewBox="0 0 340 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="max-width:300px;margin:8px auto 0;">
+          <rect x="95" y="40" width="150" height="130" rx="10" fill="#fff" stroke="#1b2430" stroke-width="1.2"/>
+          <line class="membrane" x1="170" y1="46" x2="170" y2="164"/>
+          <path class="blood flow" d="M20 60 H130 V150 H20"/>
+          <path class="dial flow" d="M320 150 H210 V60 H320"/>
+          <path class="conv flow" d="M60 20 V60"/>
+        </svg>
+        <div id="verdicts"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;" id="logCard">
+      <div class="eyebrow">Cause and effect</div>
+      <h2 style="margin-top:2px;">What changed, and why</h2>
+      <ul class="log" id="log"><li class="empty" style="display:block;background:none;">Change any input and the rule that fired appears here.</li></ul>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <b>Prototype note.</b> The modality and anticoagulation rules on this page are a mirror of <span class="mono">generatePrescription()</span> (index.html, modality ladder with the dysnatraemia priority-0 override, and anticoag ladder) so the prototype can be clicked without the live engine. On integration the live engine is called instead and this mirror is discarded. The mirror is parity-tested against the engine across all input permutations.
+</div>
+
+</div>
+
+<script>
+// ------------------------------------------------------------------
+// State (same value vocabulary as v13 in index.html)
+// ------------------------------------------------------------------
+var S = { emergencies: new Set(), goals: new Set(), special: new Set(), haemo: null, sepsis: false, bleeding: null, liver: null };
+var guess = { mod: null, ac: null };
+var revealed = false;
+var lastOut = null;
+var tally = { n: 0, hitMod: 0, hitAc: 0 };
+
+// ------------------------------------------------------------------
+// MIRROR of engine rules. Keep in lock-step with index.html:
+//   modality ladder  -> generatePrescription() "MODALITY LOGIC"
+//   anticoag ladder  -> generatePrescription() "ANTICOAGULATION LOGIC" + dysnatraemia override
+// Parity test: poc/parity.js
+// ------------------------------------------------------------------
+var RULES = {
+  r1:  'High solute load (toxin / rhabdo) -> both mechanisms for maximum clearance',
+  r2:  'Volume is the only goal -> CVVHDF at low effluent (this unit does not run SCUF)',
+  r3:  'Volume + general clearance, no electrolyte goal -> convection-based CVVH',
+  r4:  'Distributive shock + electrolyte goal -> diffusion for small molecules',
+  r5:  'Electrolyte is the only goal -> diffusion is most efficient for K+ / Na+ / urea',
+  r5b: 'Dysnatraemia -> CVVHD mandated by MICU Protocol v6 p18-19 ("Use CVVHD"). Pure diffusion gives predictable Na+ flux via the dialysate gradient. This overrides every other modality goal.',
+  r0:  'Default: balanced convective + diffusive clearance',
+  a_dys_none: 'Dysnatraemia + high bleeding risk -> Protocol v6: Nil (citrate adds ~140 mmol/L Na+ load)',
+  a_dys_hep:  'Dysnatraemia -> Protocol v6: Heparin, not citrate (citrate adds ~140 mmol/L Na+ load)',
+  a_none:     'High bleeding risk + liver failure -> citrate accumulation risk too high; no anticoagulation',
+  // Rules the tool currently applies but which are under clinical review.
+  // The POC must mirror the engine exactly, so these still fire - they are
+  // flagged so a learner is not taught a contested rule as settled.
+  REVIEW: {
+    a_none: 'Under review. Citrate is regional: it does not anticoagulate the patient, so bleeding is not a citrate contraindication (Protocol v6 p2 does not list it). Yu 2020 found citrate outperformed no-anticoagulation in exactly this group.',
+    r3: 'Under review. Acidosis alone gives CVVHDF, but acidosis + volume gives CVVH. There is no physiological reason for the split, and dose-matched modalities are outcome-equivalent.'
+  },
+  a_liver:    'Liver failure alone -> citrate with enhanced monitoring (tCa/iCa Q4h); not an absolute contraindication',
+  a_bleed:    'High bleeding risk -> regional citrate is preferred; it is not systemic',
+  a_default:  'First line per KDIGO: regional citrate -> longer circuit life, no systemic anticoagulation'
+};
+
+function engine(s) {
+  var ind = new Set([].concat(Array.from(s.emergencies), Array.from(s.goals)));
+  var ctx = s.special;
+  var distributive = s.haemo === 'vasopressors' && s.sepsis;
+  var hasDys = ctx.has('hypernatemia') || ctx.has('hyponatemia');
+  var highBleed = s.bleeding === 'high';
+  var liverFail = s.liver === 'failing';
+
+  var mod, mr;
+  if (hasDys) { mod = 'CVVHD'; mr = 'r5b'; }
+  else if (ind.has('toxin') || ctx.has('rhabdo')) { mod = 'CVVHDF'; mr = 'r1'; }
+  else if (ind.has('volume') && ind.size === 1) { mod = 'CVVHDF'; mr = 'r2'; }
+  else if (ind.has('volume') && (ind.has('solute-clearance') || ind.has('acidosis-correction')) && !ind.has('electrolyte') && !ind.has('refractory-k')) { mod = 'CVVH'; mr = 'r3'; }
+  else if (distributive && ind.has('electrolyte')) { mod = 'CVVHD'; mr = 'r4'; }
+  else if (ind.has('electrolyte') && ind.size === 1) { mod = 'CVVHD'; mr = 'r5'; }
+  else { mod = 'CVVHDF'; mr = 'r0'; }
+
+  var ac, ar;
+  if (hasDys) { if (highBleed) { ac = 'none'; ar = 'a_dys_none'; } else { ac = 'heparin'; ar = 'a_dys_hep'; } }
+  else if (highBleed && liverFail) { ac = 'none'; ar = 'a_none'; }
+  else if (liverFail) { ac = 'citrate'; ar = 'a_liver'; }
+  else if (highBleed) { ac = 'citrate'; ar = 'a_bleed'; }
+  else { ac = 'citrate'; ar = 'a_default'; }
+
+  return { mod: mod, modRule: mr, ac: ac, acRule: ar };
+}
+
+// Counterfactual: the single toggle that would change a given output
+var TOGGLES = [
+  ['emergencies','refractory-k','K+ >=6.5 + ECG'], ['emergencies','toxin','dialysable toxin'],
+  ['goals','volume','volume removal'], ['goals','solute-clearance','solute clearance'],
+  ['goals','acidosis-correction','acidosis correction'], ['goals','electrolyte','electrolyte control'],
+  ['special','rhabdo','rhabdomyolysis'], ['special','hypernatemia','Na >155'], ['special','hyponatemia','Na <125'],
+  ['sepsis', true, 'septic source'], ['haemo', 'vasopressors', 'vasopressors'],
+  ['bleeding','high','high bleeding risk'], ['liver','failing','liver failure']
+];
+function clone(s) { return { emergencies: new Set(s.emergencies), goals: new Set(s.goals), special: new Set(s.special), haemo: s.haemo, sepsis: s.sepsis, bleeding: s.bleeding, liver: s.liver }; }
+function flipFor(key) {
+  var base = engine(S)[key];
+  for (var i = 0; i < TOGGLES.length; i++) {
+    var t = TOGGLES[i], c = clone(S), verb;
+    if (t[0] === 'sepsis') { c.sepsis = !c.sepsis; verb = c.sepsis ? 'add' : 'remove'; }
+    else if (t[0] === 'haemo') { c.haemo = c.haemo === 'vasopressors' ? 'stable' : 'vasopressors'; verb = c.haemo === 'vasopressors' ? 'add' : 'remove'; }
+    else if (t[0] === 'bleeding' || t[0] === 'liver') { var on = c[t[0]] === t[1]; c[t[0]] = on ? (t[0] === 'bleeding' ? 'low' : 'ok') : t[1]; verb = on ? 'remove' : 'add'; }
+    else { if (c[t[0]].has(t[1])) { c[t[0]].delete(t[1]); verb = 'remove'; } else { c[t[0]].add(t[1]); verb = 'add'; } }
+    var out = engine(c)[key];
+    if (out !== base) return { verb: verb, label: t[2], to: out };
+  }
+  return null;
+}
+var AC_LABEL = { citrate: 'Regional citrate', heparin: 'Heparin', none: 'No anticoagulation' };
+
+// Renders the amber flag for any rule sitting in RULES.REVIEW.
+function revNote(key) {
+  var t = RULES.REVIEW[key];
+  return t ? '<div class="rev"><b>Pending clinical review</b>' + t + '</div>' : '';
+}
+
+// ------------------------------------------------------------------
+// Cases
+// ------------------------------------------------------------------
+var CASES = [
+  { name: 'Septic shock, K+ 6.1', set: { goals: ['electrolyte','solute-clearance'], haemo: 'vasopressors', sepsis: true, bleeding: 'low', liver: 'ok' } },
+  { name: 'Cirrhotic, GI bleed, fluid overloaded', set: { goals: ['volume','acidosis-correction'], haemo: 'stable', bleeding: 'high', liver: 'failing' } },
+  { name: 'Hypernatraemic, oliguric, acidotic', set: { goals: ['volume','acidosis-correction'], special: ['hypernatemia'], haemo: 'stable', bleeding: 'low', liver: 'ok' } }
+];
+
+// ------------------------------------------------------------------
+// UI
+// ------------------------------------------------------------------
+function $(id) { return document.getElementById(id); }
+function fdShow(mod, svg) {
+  svg = svg || $('fdPrimer');
+  svg.classList.toggle('off-dial', mod === 'CVVH');
+  svg.classList.toggle('off-conv', mod === 'CVVHD');
+}
+function paintInputs() {
+  document.querySelectorAll('[data-set]').forEach(function (g) {
+    var k = g.getAttribute('data-set');
+    g.querySelectorAll('.chip').forEach(function (c) { c.classList.toggle('on', S[k].has(c.getAttribute('data-v'))); });
+  });
+  document.querySelectorAll('[data-radio]').forEach(function (g) {
+    var k = g.getAttribute('data-radio');
+    g.querySelectorAll('.chip').forEach(function (c) {
+      var v = c.getAttribute('data-v');
+      c.classList.toggle('on', k === 'sepsis' ? S.sepsis : S[k] === v);
+    });
+  });
+}
+function logChange(prev, next, label) {
+  var ul = $('log'); var e = ul.querySelector('.empty'); if (e) e.remove();
+  function row(cls, what, why, cf, key) {
+    var li = document.createElement('li'); li.className = cls;
+    li.innerHTML = '<span class="dot"></span><div><div class="what">' + what + '</div><div class="why">' + why + '</div>' +
+      (cf ? '<div class="cf">' + cf + '</div>' : '') + revNote(key) + '</div>';
+    ul.insertBefore(li, ul.firstChild);
+  }
+  var cfM = flipFor('mod'), cfA = flipFor('ac');
+  var cfMt = cfM ? 'To flip it: <b>' + cfM.verb + ' ' + cfM.label + '</b> &rarr; ' + cfM.to : 'No single input flips this.';
+  var cfAt = cfA ? 'To flip it: <b>' + cfA.verb + ' ' + cfA.label + '</b> &rarr; ' + AC_LABEL[cfA.to] : 'No single input flips this.';
+  var any = false;
+  if (!prev || prev.mod !== next.mod || prev.modRule !== next.modRule) {
+    row('mod', 'Modality &rarr; ' + next.mod + (prev && prev.mod !== next.mod ? ' <span style="font-weight:500;color:var(--mute)">(was ' + prev.mod + ')</span>' : ''), RULES[next.modRule], cfMt, next.modRule); any = true;
+  }
+  if (!prev || prev.ac !== next.ac || prev.acRule !== next.acRule) {
+    row('ac', 'Anticoagulation &rarr; ' + AC_LABEL[next.ac] + (prev && prev.ac !== next.ac ? ' <span style="font-weight:500;color:var(--mute)">(was ' + AC_LABEL[prev.ac] + ')</span>' : ''), RULES[next.acRule], cfAt, next.acRule); any = true;
+  }
+  if (!any) row('same', label + ' &middot; nothing moved', 'That input does not reach the modality or anticoagulation rules here; in the live tool it changes dose, UF rate or filter.', '');
+}
+function onInputChange(label) {
+  paintInputs();
+  var next = engine(S);
+  if (revealed) logChange(lastOut, next, label); // teach only once they have committed
+  lastOut = next;
+  if (revealed) paintReveal();
+}
+function paintGuess() {
+  ['Mod','Ac'].forEach(function (k) {
+    $('guess' + k).querySelectorAll('.opt').forEach(function (o) {
+      o.className = 'opt' + (guess[k.toLowerCase()] === o.getAttribute('data-v') ? ' on' : '');
+    });
+  });
+  $('revealBtn').disabled = !(guess.mod && guess.ac);
+}
+function paintReveal() {
+  var out = engine(S); lastOut = out;
+  fdShow(out.mod, $('fdReveal'));
+  [['Mod','mod'],['Ac','ac']].forEach(function (p) {
+    $('guess' + p[0]).querySelectorAll('.opt').forEach(function (o) {
+      var v = o.getAttribute('data-v'); o.className = 'opt';
+      if (v === guess[p[1]] && v === out[p[1]]) o.classList.add('hit');
+      else if (v === guess[p[1]]) o.classList.add('miss');
+      else if (v === out[p[1]]) o.classList.add('truth');
+    });
+  });
+  var cfM = flipFor('mod'), cfA = flipFor('ac');
+  function v(hit, title, rule, cf, key) {
+    return '<div class="verdict ' + (hit ? 'hit' : 'miss') + '"><div class="h">' + (hit ? 'Agreed: ' : 'REINA says ') + title + '</div><div class="rule">' + rule + '</div>' +
+      (cf ? '<div class="flip">If you had wanted your answer instead: <b>' + cf.verb + ' ' + cf.label + '</b> &rarr; ' + cf.to + '</div>' : '') +
+      revNote(key) + '</div>';
+  }
+  var html = v(guess.mod === out.mod, out.mod, RULES[out.modRule], guess.mod !== out.mod && cfM ? { verb: cfM.verb, label: cfM.label, to: cfM.to } : null, out.modRule)
+           + v(guess.ac === out.ac, AC_LABEL[out.ac], RULES[out.acRule], guess.ac !== out.ac && cfA ? { verb: cfA.verb, label: cfA.label, to: AC_LABEL[cfA.to] } : null, out.acRule);
+  $('verdicts').innerHTML = html;
+  $('reveal').classList.add('show');
+  $('score').textContent = tally.n ? tally.n + ' case' + (tally.n > 1 ? 's' : '') + ' \u00b7 modality ' + tally.hitMod + '/' + tally.n + ' \u00b7 anticoag ' + tally.hitAc + '/' + tally.n : '';
+}
+function reveal() {
+  if (!(guess.mod && guess.ac)) return;
+  var out = engine(S);
+  if (!revealed) { tally.n++; if (guess.mod === out.mod) tally.hitMod++; if (guess.ac === out.ac) tally.hitAc++; }
+  revealed = true;
+  lastOut = out;
+  paintReveal();
+  var ul = $('log'); var e = ul.querySelector('.empty'); if (e) e.textContent = 'Now change an input and watch what moves.';
+}
+function resetAll() {
+  guess = { mod: null, ac: null }; revealed = false; lastOut = null;
+  $('reveal').classList.remove('show'); $('verdicts').innerHTML = '';
+  $('log').innerHTML = '<li class="empty" style="display:block;background:none;">Change any input and the rule that fired appears here.</li>';
+  paintGuess();
+}
+function applyCase(c) {
+  S = { emergencies: new Set(c.set.emergencies || []), goals: new Set(c.set.goals || []), special: new Set(c.set.special || []), haemo: c.set.haemo || null, sepsis: !!c.set.sepsis, bleeding: c.set.bleeding || null, liver: c.set.liver || null };
+  resetAll(); paintInputs();
+  document.querySelectorAll('#cases .chip').forEach(function (b) { b.classList.toggle('on', b.textContent === c.name); });
+}
+
+// wire up
+document.querySelectorAll('[data-set] .chip').forEach(function (c) {
+  c.addEventListener('click', function () {
+    var k = c.parentElement.getAttribute('data-set'), v = c.getAttribute('data-v');
+    if (S[k].has(v)) S[k].delete(v); else S[k].add(v);
+    if (k === 'special' && v === 'hypernatemia' && S.special.has(v)) S.special.delete('hyponatemia');
+    if (k === 'special' && v === 'hyponatemia' && S.special.has(v)) S.special.delete('hypernatemia');
+    onInputChange(c.textContent);
+  });
+});
+document.querySelectorAll('[data-radio] .chip').forEach(function (c) {
+  c.addEventListener('click', function () {
+    var k = c.parentElement.getAttribute('data-radio'), v = c.getAttribute('data-v');
+    if (k === 'sepsis') S.sepsis = !S.sepsis; else S[k] = (S[k] === v ? null : v);
+    onInputChange(c.textContent);
+  });
+});
+document.querySelectorAll('#guessMod .opt, #guessAc .opt').forEach(function (o) {
+  o.addEventListener('click', function () {
+    if (revealed) return;
+    var k = o.parentElement.id === 'guessMod' ? 'mod' : 'ac';
+    guess[k] = o.getAttribute('data-v'); paintGuess();
+  });
+});
+$('revealBtn').addEventListener('click', reveal);
+$('resetBtn').addEventListener('click', resetAll);
+CASES.forEach(function (c) {
+  var b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.textContent = c.name;
+  b.addEventListener('click', function () { applyCase(c); }); $('cases').appendChild(b);
+});
+paintInputs(); paintGuess();
+</script>
+</body>
+</html>
